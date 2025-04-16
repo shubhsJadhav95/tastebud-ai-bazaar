@@ -169,14 +169,44 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
     if (savedCart) {
-      const parsedCart = JSON.parse(savedCart);
-      Object.entries(parsedCart).forEach(([key, value]) => {
-        if (key === "items" && Array.isArray(value)) {
-          (value as CartItem[]).forEach(item => {
-            dispatch({ type: "ADD_ITEM", payload: { ...item, quantity: 1 }});
+      try {
+        const parsedCart = JSON.parse(savedCart);
+        if (parsedCart.items && Array.isArray(parsedCart.items)) {
+          // Clear cart first to ensure we don't have duplicates
+          dispatch({ type: "CLEAR_CART" });
+          
+          // Add each item to the cart properly
+          parsedCart.items.forEach((item: CartItem) => {
+            // First add the item as a MenuItem (without quantity)
+            const menuItem: MenuItem = {
+              id: item.id,
+              name: item.name,
+              description: item.description,
+              price: item.price,
+              image: item.image,
+              calories: item.calories,
+              restaurantId: item.restaurantId,
+              restaurantName: item.restaurantName,
+              nutrients: item.nutrients,
+              servingSize: item.servingSize
+            };
+            
+            // Add the item to the cart
+            dispatch({ type: "ADD_ITEM", payload: menuItem });
+            
+            // If quantity is more than 1, update it
+            if (item.quantity > 1) {
+              dispatch({ 
+                type: "UPDATE_QUANTITY", 
+                payload: { id: item.id, quantity: item.quantity }
+              });
+            }
           });
         }
-      });
+      } catch (error) {
+        console.error("Error parsing cart from localStorage:", error);
+        localStorage.removeItem("cart");
+      }
     }
   }, []);
   
