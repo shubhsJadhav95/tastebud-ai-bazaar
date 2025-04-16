@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -12,7 +11,8 @@ import {
   Home, 
   UtensilsCrossed, 
   History, 
-  Settings 
+  Settings,
+  IndianRupee 
 } from "lucide-react";
 
 const NavBar: React.FC = () => {
@@ -30,18 +30,15 @@ const NavBar: React.FC = () => {
     <nav className="bg-white shadow-md py-4 px-6 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center">
-          {/* Logo and Name */}
           <div className="flex items-center space-x-2">
             <Link 
               to={userType === "customer" ? "/customer/home" : userType === "restaurant" ? "/restaurant/dashboard" : "/"} 
               className="flex items-center"
             >
-              <span className="text-food-primary text-2xl font-bold">TasteBud</span>
-              <span className="text-food-secondary text-2xl font-bold">Bazaar</span>
+              <span className="text-food-primary text-2xl font-bold">Swadisht</span>
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {user ? (
               <>
@@ -99,7 +96,6 @@ const NavBar: React.FC = () => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="md:hidden">
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -110,7 +106,6 @@ const NavBar: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="md:hidden mt-4 space-y-4">
             {user ? (

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import LoginCard from "../components/LoginCard";
@@ -13,11 +12,10 @@ const Index: React.FC = () => {
         <div className="bg-gradient-to-r from-food-accent to-food-muted py-16 px-6">
           <div className="max-w-7xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              <span className="text-food-primary">TasteBud</span>
-              <span className="text-food-secondary">Bazaar</span>
+              <span className="text-food-primary">Swadisht</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-700 mb-12 max-w-3xl mx-auto">
-              Connecting hungry customers with amazing restaurants
+              Connecting hungry customers with amazing local restaurants
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">

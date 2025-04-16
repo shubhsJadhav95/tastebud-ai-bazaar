@@ -1,5 +1,5 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from "react";
+import { IndianRupee } from "lucide-react";
 
 export interface MenuItem {
   id: string;
@@ -58,10 +58,19 @@ const calculateTotalAmount = (items: CartItem[]): number => {
   return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 };
 
+// Currency conversion function
+export const convertToRupees = (price: number): number => {
+  // Assuming 1 USD = 83 INR (approximate current rate)
+  return Math.round(price * 83);
+};
+
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case "ADD_ITEM": {
-      const newItem = action.payload;
+      const newItem = {
+        ...action.payload,
+        price: convertToRupees(action.payload.price)
+      };
       
       // Check if cart is empty or adding from same restaurant
       if (state.items.length === 0) {
