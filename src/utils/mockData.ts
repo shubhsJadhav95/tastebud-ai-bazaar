@@ -1,3 +1,4 @@
+
 import { MenuItem } from "../context/CartContext";
 
 export interface Restaurant {
@@ -43,47 +44,47 @@ export interface Order {
 export const restaurants: Restaurant[] = [
   {
     id: "r1",
-    name: "Burger Palace",
+    name: "Spice Paradise",
     image: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-4.0.3",
-    cuisine: "American",
+    cuisine: "North Indian",
     rating: 4.5,
     deliveryTime: "25-35 min",
     priceRange: "$$",
-    address: "123 Main St, Foodville",
-    description: "The best burgers in town, made with 100% fresh Angus beef."
+    address: "123 Gandhi Road, Mumbai",
+    description: "Authentic North Indian cuisine with a modern twist."
   },
   {
     id: "r2",
-    name: "Pizza Paradise",
+    name: "Dosa House",
     image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3",
-    cuisine: "Italian",
+    cuisine: "South Indian",
     rating: 4.2,
     deliveryTime: "30-45 min",
     priceRange: "$$",
-    address: "456 Park Ave, Foodville",
-    description: "Authentic Italian pizzas baked in a wood-fired oven."
+    address: "456 MG Road, Bangalore",
+    description: "Authentic South Indian dosas and idlis."
   },
   {
     id: "r3",
-    name: "Taco Temple",
+    name: "Street Food Corner",
     image: "https://images.unsplash.com/photo-1565299715199-866c917206bb?ixlib=rb-4.0.3",
-    cuisine: "Mexican",
+    cuisine: "Chaat & Snacks",
     rating: 4.7,
     deliveryTime: "20-30 min",
     priceRange: "$",
-    address: "789 Taco St, Foodville",
-    description: "Fresh, flavorful tacos made with traditional recipes."
+    address: "789 Chandni Chowk, Delhi",
+    description: "Fresh, flavorful street food and chaat."
   },
   {
     id: "r4",
-    name: "Sushi Supreme",
+    name: "Mumbai Tadka",
     image: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-4.0.3",
-    cuisine: "Japanese",
+    cuisine: "Mumbai Street Food",
     rating: 4.8,
     deliveryTime: "40-50 min",
     priceRange: "$$$",
-    address: "101 Ocean Blvd, Foodville",
-    description: "Premium sushi made with the freshest seafood."
+    address: "101 Marine Drive, Mumbai",
+    description: "Premium Mumbai street food with a twist."
   },
   {
     id: "r5",
@@ -93,19 +94,19 @@ export const restaurants: Restaurant[] = [
     rating: 4.4,
     deliveryTime: "35-45 min",
     priceRange: "$$",
-    address: "202 Spice Rd, Foodville",
+    address: "202 Spice Road, Jaipur",
     description: "Authentic Indian curries with aromatic spices."
   },
   {
     id: "r6",
-    name: "Noodle Palace",
+    name: "Biryani Palace",
     image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?ixlib=rb-4.0.3",
-    cuisine: "Chinese",
+    cuisine: "Hyderabadi",
     rating: 4.3,
     deliveryTime: "25-40 min",
     priceRange: "$",
-    address: "303 Dragon St, Foodville",
-    description: "Handmade noodles and dumplings made fresh daily."
+    address: "303 Nizam Street, Hyderabad",
+    description: "Authentic Hyderabadi biryani made with premium basmati rice."
   }
 ];
 
@@ -113,13 +114,13 @@ export const menuItems: Record<string, MenuItem[]> = {
   r1: [
     {
       id: "m1",
-      name: "Classic Cheeseburger",
-      description: "Juicy beef patty with melted cheese, lettuce, tomato, and special sauce.",
-      price: 9.99,
+      name: "Butter Chicken",
+      description: "Tender chicken cooked in a rich tomato and butter gravy with aromatic spices.",
+      price: 299,
       image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3",
       calories: 650,
       restaurantId: "r1",
-      restaurantName: "Burger Palace",
+      restaurantName: "Spice Paradise",
       nutrients: {
         protein: 35,
         carbs: 40,
@@ -130,30 +131,30 @@ export const menuItems: Record<string, MenuItem[]> = {
     },
     {
       id: "m2",
-      name: "Bacon Deluxe Burger",
-      description: "Beef patty topped with crispy bacon, cheddar cheese, and BBQ sauce.",
-      price: 12.99,
+      name: "Paneer Tikka Masala",
+      description: "Cottage cheese cubes marinated with spices and grilled in tandoor, served in a creamy tomato gravy.",
+      price: 249,
       image: "https://images.unsplash.com/photo-1553979459-d2229ba7433b?ixlib=rb-4.0.3",
-      calories: 850,
+      calories: 580,
       restaurantId: "r1",
-      restaurantName: "Burger Palace",
+      restaurantName: "Spice Paradise",
       nutrients: {
-        protein: 45,
+        protein: 25,
         carbs: 42,
-        fat: 48,
-        fiber: 1
+        fat: 28,
+        fiber: 3
       },
       servingSize: "300g"
     },
     {
       id: "m3",
-      name: "Veggie Burger",
-      description: "Plant-based patty with fresh vegetables and vegan mayo.",
-      price: 10.99,
+      name: "Vegetable Biryani",
+      description: "Fragrant basmati rice cooked with mixed vegetables and aromatic spices.",
+      price: 199,
       image: "https://images.unsplash.com/photo-1520072959219-c595dc870360?ixlib=rb-4.0.3",
       calories: 450,
       restaurantId: "r1",
-      restaurantName: "Burger Palace",
+      restaurantName: "Spice Paradise",
       nutrients: {
         protein: 15,
         carbs: 55,
@@ -166,75 +167,75 @@ export const menuItems: Record<string, MenuItem[]> = {
   r2: [
     {
       id: "m4",
-      name: "Margherita Pizza",
-      description: "Classic pizza with tomato sauce, mozzarella, and fresh basil.",
-      price: 14.99,
+      name: "Masala Dosa",
+      description: "Crispy rice crepe filled with spiced potato filling, served with sambar and chutney.",
+      price: 149,
       image: "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?ixlib=rb-4.0.3",
-      calories: 780,
+      calories: 380,
       restaurantId: "r2",
-      restaurantName: "Pizza Paradise",
+      restaurantName: "Dosa House",
       nutrients: {
-        protein: 28,
-        carbs: 90,
-        fat: 24,
+        protein: 8,
+        carbs: 60,
+        fat: 14,
         fiber: 4
       },
       servingSize: "Medium (12\")"
     },
     {
       id: "m5",
-      name: "Pepperoni Pizza",
-      description: "Tomato sauce, mozzarella, and spicy pepperoni slices.",
-      price: 16.99,
+      name: "Idli Sambar",
+      description: "Steamed rice cakes served with lentil soup and coconut chutney.",
+      price: 129,
       image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?ixlib=rb-4.0.3",
-      calories: 900,
+      calories: 280,
       restaurantId: "r2",
-      restaurantName: "Pizza Paradise",
+      restaurantName: "Dosa House",
       nutrients: {
-        protein: 36,
-        carbs: 88,
-        fat: 38,
-        fiber: 3
+        protein: 10,
+        carbs: 48,
+        fat: 8,
+        fiber: 5
       },
-      servingSize: "Medium (12\")"
+      servingSize: "4 pieces"
     }
   ],
   r3: [
     {
       id: "m6",
-      name: "Beef Tacos",
-      description: "Three soft corn tortillas with seasoned beef, lettuce, tomato, and cheese.",
-      price: 8.99,
+      name: "Pav Bhaji",
+      description: "Spiced vegetable mash served with buttered bread rolls.",
+      price: 149,
       image: "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?ixlib=rb-4.0.3",
-      calories: 520,
+      calories: 420,
       restaurantId: "r3",
-      restaurantName: "Taco Temple",
+      restaurantName: "Street Food Corner",
       nutrients: {
-        protein: 28,
-        carbs: 45,
-        fat: 26,
-        fiber: 6
+        protein: 12,
+        carbs: 65,
+        fat: 18,
+        fiber: 8
       },
-      servingSize: "3 tacos (250g)"
+      servingSize: "1 plate (250g)"
     }
   ],
   r4: [
     {
       id: "m7",
-      name: "California Roll",
-      description: "Crab, avocado, and cucumber wrapped in seaweed and rice.",
-      price: 12.99,
+      name: "Vada Pav",
+      description: "Spicy potato fritter served in a bun with chutneys.",
+      price: 79,
       image: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?ixlib=rb-4.0.3",
       calories: 320,
       restaurantId: "r4",
-      restaurantName: "Sushi Supreme",
+      restaurantName: "Mumbai Tadka",
       nutrients: {
-        protein: 12,
-        carbs: 40,
-        fat: 9,
+        protein: 8,
+        carbs: 42,
+        fat: 14,
         fiber: 3
       },
-      servingSize: "8 pieces (180g)"
+      servingSize: "1 piece (180g)"
     }
   ],
   r5: [
@@ -242,7 +243,7 @@ export const menuItems: Record<string, MenuItem[]> = {
       id: "m8",
       name: "Chicken Tikka Masala",
       description: "Grilled chicken in a creamy tomato sauce with aromatic spices.",
-      price: 15.99,
+      price: 289,
       image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?ixlib=rb-4.0.3",
       calories: 550,
       restaurantId: "r5",
@@ -259,17 +260,17 @@ export const menuItems: Record<string, MenuItem[]> = {
   r6: [
     {
       id: "m9",
-      name: "Beef Chow Mein",
-      description: "Stir-fried noodles with beef and mixed vegetables.",
-      price: 11.99,
+      name: "Hyderabadi Biryani",
+      description: "Fragrant basmati rice cooked with tender meat and aromatic spices.",
+      price: 259,
       image: "https://images.unsplash.com/photo-1585032226651-759b368d7246?ixlib=rb-4.0.3",
-      calories: 480,
+      calories: 580,
       restaurantId: "r6",
-      restaurantName: "Noodle Palace",
+      restaurantName: "Biryani Palace",
       nutrients: {
-        protein: 25,
-        carbs: 60,
-        fat: 15,
+        protein: 28,
+        carbs: 65,
+        fat: 18,
         fiber: 5
       },
       servingSize: "400g"
@@ -302,8 +303,8 @@ export const generateRestaurantOrders = (restaurantId: string): Order[] => {
       status: statuses[Math.floor(Math.random() * statuses.length)],
       createdAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
       customerName: `Customer ${index + 1}`,
-      customerAddress: `${Math.floor(Math.random() * 1000) + 1} Customer St, Cityville`,
-      paymentMethod: Math.random() > 0.5 ? "Credit Card" : "Cash"
+      customerAddress: `${Math.floor(Math.random() * 1000) + 1} ${['Gandhi Road', 'MG Road', 'Nehru Street', 'Rajiv Chowk'][Math.floor(Math.random() * 4)]}, ${['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata'][Math.floor(Math.random() * 5)]}`,
+      paymentMethod: Math.random() > 0.5 ? "UPI" : "Cash on Delivery"
     };
   });
 };
@@ -320,7 +321,7 @@ export const offers = [
   },
   {
     id: "o2",
-    title: "Free delivery on orders above $30",
+    title: "Free delivery on orders above ₹300",
     description: "Use code FREEDEL",
     image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3",
     code: "FREEDEL",
@@ -329,15 +330,15 @@ export const offers = [
   },
   {
     id: "o3",
-    title: "Buy 1 Get 1 Free on Burgers",
-    description: "Only at Burger Palace",
+    title: "Buy 1 Get 1 Free on Thalis",
+    description: "Only at Spice Paradise",
     image: "https://images.unsplash.com/photo-1550547660-d9450f859349?ixlib=rb-4.0.3",
-    code: "BURGER2X",
+    code: "THALI2X",
     discount: 100,
     expiry: "2025-06-30"
   }
 ];
 
 export const cuisineFilters = [
-  "All", "American", "Italian", "Mexican", "Japanese", "Indian", "Chinese", "Thai", "Mediterranean"
+  "All", "North Indian", "South Indian", "Street Food", "Biryani", "Chaat", "Punjabi", "Gujarati", "Bengali", "Hyderabadi"
 ];

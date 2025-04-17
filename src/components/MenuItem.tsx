@@ -2,7 +2,6 @@
 import React from "react";
 import { Plus, Info, IndianRupee } from "lucide-react";
 import { useCart, MenuItem as MenuItemType } from "../context/CartContext";
-import { convertToRupees } from "../context/CartContext";
 import { toast } from "sonner";
 import { 
   Dialog,
@@ -19,12 +18,10 @@ interface MenuItemProps {
 
 const MenuItem: React.FC<MenuItemProps> = ({ item }) => {
   const { addItem } = useCart();
-  const priceInRupees = convertToRupees(item.price);
 
   const handleAddToCart = () => {
     addItem({
-      ...item,
-      price: priceInRupees
+      ...item
     });
     toast.success(`Added ${item.name} to cart`);
   };
@@ -90,7 +87,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ item }) => {
           <div>
             <span className="font-bold flex items-center">
               <IndianRupee size={14} className="mr-1" />
-              {priceInRupees.toFixed(2)}
+              {item.price.toFixed(2)}
             </span>
             <span className="text-sm text-gray-500 ml-2">{item.calories} Cal</span>
           </div>

@@ -61,11 +61,8 @@ const calculateTotalAmount = (items: CartItem[]): number => {
   return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 };
 
-// Price conversion function (now used for display consistency)
-// Items are already stored in rupees in this implementation
+// Price conversion function - no longer needed as prices are already in rupees
 export const convertToRupees = (price: number): number => {
-  // We're not converting anymore as prices are already in rupees now
-  // Just return the price directly
   return price;
 };
 

@@ -11,7 +11,7 @@ import {
   CheckCircle, 
   Truck, 
   BarChart4, 
-  DollarSign, 
+  IndianRupee, 
   Users, 
   TrendingUp 
 } from "lucide-react";
@@ -114,11 +114,11 @@ const RestaurantDashboard: React.FC = () => {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <div className="flex items-center mb-3">
                 <div className="bg-green-100 p-3 rounded-full mr-4">
-                  <DollarSign size={24} className="text-green-600" />
+                  <IndianRupee size={24} className="text-green-600" />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Revenue</p>
-                  <h3 className="text-2xl font-bold">${stats.revenue.toFixed(2)}</h3>
+                  <h3 className="text-2xl font-bold">₹{stats.revenue.toFixed(2)}</h3>
                 </div>
               </div>
               <div className="flex items-center text-sm text-green-600">
@@ -209,7 +209,10 @@ const RestaurantDashboard: React.FC = () => {
                           {order.items.length} items
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          ${order.totalAmount.toFixed(2)}
+                          <span className="flex items-center">
+                            <IndianRupee size={12} className="mr-1" />
+                            {order.totalAmount.toFixed(2)}
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
