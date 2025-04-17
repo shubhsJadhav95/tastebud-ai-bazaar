@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
@@ -40,7 +39,6 @@ const RestaurantProfile: React.FC = () => {
     }
   });
   
-  // Load restaurant data or set default for new restaurant
   useEffect(() => {
     if (!user) {
       navigate("/restaurant/login");
@@ -50,13 +48,10 @@ const RestaurantProfile: React.FC = () => {
     setLoading(true);
     
     setTimeout(() => {
-      // If user is posj2004@gmail.com, load existing restaurant data
       if (user.email === "posj2004@gmail.com") {
-        // Use the first restaurant from mock data
         const restaurantData = restaurants[0];
         setProfile({
           ...restaurantData,
-          // Add any missing fields
           openingHours: restaurantData.openingHours || {
             monday: { open: "10:00", close: "22:00" },
             tuesday: { open: "10:00", close: "22:00" },
@@ -73,7 +68,6 @@ const RestaurantProfile: React.FC = () => {
           }
         });
       } else {
-        // For new restaurants, use default data with user's name and email
         setProfile({
           ...profile,
           id: user.id,
@@ -93,11 +87,9 @@ const RestaurantProfile: React.FC = () => {
     const { name, value } = e.target;
     
     if (name.includes('.')) {
-      // Handle nested properties (openingHours, contactInfo)
       const [parent, child, subchild] = name.split('.');
       
       if (subchild) {
-        // Handle deeper nesting (e.g., openingHours.monday.open)
         setProfile({
           ...profile,
           [parent]: {
@@ -109,7 +101,6 @@ const RestaurantProfile: React.FC = () => {
           }
         });
       } else {
-        // Handle single level nesting (e.g., contactInfo.phone)
         setProfile({
           ...profile,
           [parent]: {
@@ -119,7 +110,6 @@ const RestaurantProfile: React.FC = () => {
         });
       }
     } else {
-      // Handle top-level properties
       setProfile({
         ...profile,
         [name]: value
@@ -128,18 +118,13 @@ const RestaurantProfile: React.FC = () => {
   };
   
   const handleSaveProfile = () => {
-    // Validation
     if (!profile.name || !profile.description || !profile.cuisine || !profile.address) {
       toast.error("Please fill in all required fields");
       return;
     }
     
-    // In a real app, we would save to the database here
-    // saveToDatabase(profile);
-    
     toast.success("Restaurant profile updated successfully");
     
-    // Simulate reload to reflect changes
     setLoading(true);
     setTimeout(() => {
       setLoading(false);

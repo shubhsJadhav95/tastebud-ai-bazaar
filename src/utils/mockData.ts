@@ -1,4 +1,3 @@
-
 import { MenuItem } from "../context/CartContext";
 
 export interface Restaurant {
@@ -11,6 +10,21 @@ export interface Restaurant {
   priceRange: string;
   address: string;
   description: string;
+  logo?: string;
+  openingHours?: {
+    monday: { open: string; close: string };
+    tuesday: { open: string; close: string };
+    wednesday: { open: string; close: string };
+    thursday: { open: string; close: string };
+    friday: { open: string; close: string };
+    saturday: { open: string; close: string };
+    sunday: { open: string; close: string };
+  };
+  contactInfo?: {
+    phone: string;
+    email: string;
+    website: string;
+  };
 }
 
 export interface Order {
