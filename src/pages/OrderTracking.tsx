@@ -5,14 +5,13 @@ import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import OrderItem from "../components/OrderItem";
 import { Check, Clock, Utensils, Truck, Gift, MapPin } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 const OrderTracking: React.FC = () => {
   const [order, setOrder] = useState<any>(null);
   const [currentStatus, setCurrentStatus] = useState<string>("pending");
   const [donationOpen, setDonationOpen] = useState(false);
-  const [donationAmount, setDonationAmount] = useState<number>(0);
   const [isDelivered, setIsDelivered] = useState(false);
   
   // Load the most recent order from localStorage
@@ -51,9 +50,9 @@ const OrderTracking: React.FC = () => {
     return () => clearInterval(interval);
   };
   
-  // Handle donation submission
+  // Handle donation
   const handleDonate = () => {
-    toast.success(`Thank you for donating $${donationAmount.toFixed(2)} to help those in need!`);
+    toast.success("Thank you for donating your leftover food to help those in need!");
     setDonationOpen(false);
   };
 
@@ -235,27 +234,27 @@ const OrderTracking: React.FC = () => {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span>${(order.totalAmount - order.deliveryFee - order.tax + order.discount).toFixed(2)}</span>
+                  <span>₹{(order.totalAmount - order.deliveryFee - order.tax + order.discount).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Delivery Fee</span>
-                  <span>${order.deliveryFee.toFixed(2)}</span>
+                  <span>₹{order.deliveryFee.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tax</span>
-                  <span>${order.tax.toFixed(2)}</span>
+                  <span>₹{order.tax.toFixed(2)}</span>
                 </div>
                 
                 {order.discount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount ({order.couponApplied})</span>
-                    <span>-${order.discount.toFixed(2)}</span>
+                    <span>-₹{order.discount.toFixed(2)}</span>
                   </div>
                 )}
                 
                 <div className="border-t pt-4 flex justify-between font-bold">
                   <span>Total</span>
-                  <span>${order.totalAmount.toFixed(2)}</span>
+                  <span>₹{order.totalAmount.toFixed(2)}</span>
                 </div>
               </div>
               
@@ -281,85 +280,29 @@ const OrderTracking: React.FC = () => {
         </div>
       </div>
       
-      {/* Donation Dialog */}
+      {/* Donation Dialog - Simplified */}
       <Dialog open={donationOpen} onOpenChange={setDonationOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Donate Leftover Food</DialogTitle>
             <DialogDescription>
-              Your contribution helps provide meals to those in need. Thank you for making a difference!
+              Your leftover food will be collected and distributed to those in need. Thank you for your generosity!
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <div className="mb-4">
-              <label htmlFor="donation-amount" className="block text-sm font-medium text-gray-700 mb-1">
-                Donation Amount
-              </label>
-              <input
-                type="number"
-                id="donation-amount"
-                min="1"
-                step="0.50"
-                className="input-field"
-                value={donationAmount}
-                onChange={(e) => setDonationAmount(parseFloat(e.target.value) || 0)}
-              />
-            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              By donating your leftover food, you're helping reduce food waste and supporting those facing food insecurity.
+            </p>
             
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <button
-                type="button"
-                className="py-2 px-3 border rounded-md hover:bg-gray-50"
-                onClick={() => setDonationAmount(5)}
-              >
-                $5
-              </button>
-              <button
-                type="button"
-                className="py-2 px-3 border rounded-md hover:bg-gray-50"
-                onClick={() => setDonationAmount(10)}
-              >
-                $10
-              </button>
-              <button
-                type="button"
-                className="py-2 px-3 border rounded-md hover:bg-gray-50"
-                onClick={() => setDonationAmount(15)}
-              >
-                $15
-              </button>
-            </div>
-            
-            <div className="text-sm text-gray-600">
-              <p className="mb-2">
-                <strong>How your donation helps:</strong>
-              </p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>$5 can provide 2 meals to someone in need</li>
-                <li>$10 can provide 4 meals to someone in need</li>
-                <li>$15 can provide 6 meals to someone in need</li>
-              </ul>
-            </div>
-          </div>
-          
-          <DialogFooter>
             <button
               type="button"
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md"
-              onClick={() => setDonationOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
+              className="btn-primary w-full"
               onClick={handleDonate}
-              disabled={donationAmount <= 0}
             >
-              Donate ${donationAmount.toFixed(2)}
+              Confirm Donation
             </button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
       

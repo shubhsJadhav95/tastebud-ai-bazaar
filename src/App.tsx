@@ -14,6 +14,9 @@ import RestaurantLogin from "./pages/RestaurantLogin";
 import CustomerHome from "./pages/CustomerHome";
 import RestaurantDashboard from "./pages/RestaurantDashboard";
 import RestaurantDetail from "./pages/RestaurantDetail";
+import RestaurantMenu from "./pages/RestaurantMenu";
+import RestaurantProfile from "./pages/RestaurantProfile";
+import CustomerProfile from "./pages/CustomerProfile";
 import Cart from "./pages/Cart";
 import OrderTracking from "./pages/OrderTracking";
 import NotFound from "./pages/NotFound";
@@ -33,8 +36,11 @@ const App = () => (
               <Route path="/customer/login" element={<CustomerLogin />} />
               <Route path="/restaurant/login" element={<RestaurantLogin />} />
               <Route path="/customer/home" element={<CustomerHome />} />
+              <Route path="/customer/profile" element={<CustomerProfile />} />
               <Route path="/customer/restaurant/:id" element={<RestaurantDetail />} />
               <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
+              <Route path="/restaurant/menu" element={<RestaurantMenu />} />
+              <Route path="/restaurant/profile" element={<RestaurantProfile />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/order-tracking" element={<OrderTracking />} />
               <Route path="*" element={<NotFound />} />
