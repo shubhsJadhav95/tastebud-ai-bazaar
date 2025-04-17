@@ -28,13 +28,15 @@ interface CartState {
   restaurantId: string | null;
   restaurantName: string | null;
   totalAmount: number;
+  supercoins: number;
 }
 
 type CartAction =
   | { type: "ADD_ITEM"; payload: MenuItem }
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
-  | { type: "CLEAR_CART" };
+  | { type: "CLEAR_CART" }
+  | { type: "ADD_SUPERCOINS"; payload: number };
 
 interface CartContextType {
   cart: CartState;
@@ -51,7 +53,8 @@ const initialState: CartState = {
   items: [],
   restaurantId: null,
   restaurantName: null,
-  totalAmount: 0
+  totalAmount: 0,
+  supercoins: 0
 };
 
 const calculateTotalAmount = (items: CartItem[]): number => {
@@ -161,6 +164,13 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         ...state,
         items: updatedItems,
         totalAmount: calculateTotalAmount(updatedItems)
+      };
+    }
+    
+    case "ADD_SUPERCOINS": {
+      return {
+        ...state,
+        supercoins: state.supercoins + action.payload
       };
     }
     

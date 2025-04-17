@@ -12,7 +12,7 @@ const CustomerHome: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCuisine, setSelectedCuisine] = useState("All");
   const [filteredRestaurants, setFilteredRestaurants] = useState(restaurants);
-  const [userLocation, setUserLocation] = useState("123 Main St, Foodville");
+  const [userLocation, setUserLocation] = useState("123 MG Road, Bengaluru");
 
   // Filter restaurants based on search term and cuisine
   useEffect(() => {
@@ -80,18 +80,18 @@ const CustomerHome: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Search for restaurants or cuisines..."
-                  className="pl-10 input-field"
+                  className="pl-10 input-field w-full"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               
-              <div className="relative inline-block">
+              <div className="relative inline-block w-full md:w-auto">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Filter size={18} className="text-gray-500" />
                 </div>
                 <select
-                  className="pl-10 input-field appearance-none"
+                  className="pl-10 input-field appearance-none w-full"
                   value={selectedCuisine}
                   onChange={(e) => setSelectedCuisine(e.target.value)}
                 >

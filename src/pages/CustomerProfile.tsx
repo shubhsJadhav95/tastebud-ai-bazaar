@@ -4,49 +4,57 @@ import { Link } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
-import { MapPin, CreditCard, ShoppingBag, User, Save } from "lucide-react";
+import { useCart } from "../context/CartContext";
+import { MapPin, CreditCard, ShoppingBag, User, Save, Gift, Coin } from "lucide-react";
 import { toast } from "sonner";
 import { 
   Tabs, 
   TabsContent, 
   TabsList, 
-  TabsTrigger 
+  TabsTrigger,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const CustomerProfile: React.FC = () => {
   const { user } = useAuth();
+  const { cart } = useCart();
   
   const [profile, setProfile] = useState({
     name: user?.name || "",
     email: user?.email || "",
     phone: "9876543210",
+    supercoins: 250,
     addresses: [
       {
         id: "addr1",
         type: "Home",
-        address: "123 Main St, Foodville, Delhi",
+        address: "123 MG Road, Koramangala, Bengaluru",
         isDefault: true
       },
       {
         id: "addr2",
         type: "Work",
-        address: "456 Office Park, Tech Hub, Bangalore",
+        address: "456 Tech Park, Whitefield, Bengaluru",
         isDefault: false
       }
     ],
     paymentMethods: [
       {
         id: "pm1",
-        type: "Credit Card",
-        lastFour: "4242",
-        expiryDate: "09/25",
+        type: "UPI",
+        upiId: "user@ybl",
         isDefault: true
       },
       {
         id: "pm2",
-        type: "Debit Card",
-        lastFour: "9876",
-        expiryDate: "06/26",
+        type: "Credit Card",
+        lastFour: "4242",
+        expiryDate: "09/25",
         isDefault: false
       }
     ]
@@ -125,18 +133,37 @@ const CustomerProfile: React.FC = () => {
     toast.success("Default payment method updated");
   };
 
+  // New function to handle donation and earning supercoins
+  const handleDonation = () => {
+    toast.success("Thank you for your donation! 50 Supercoins added to your account.");
+    setProfile({
+      ...profile,
+      supercoins: profile.supercoins + 50
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
       
       <div className="flex-grow py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-2">My Profile</h1>
-          <p className="text-gray-600">Manage your account settings and preferences</p>
+        <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">My Profile</h1>
+            <p className="text-gray-600">Manage your account settings and preferences</p>
+          </div>
+          
+          <div className="mt-4 md:mt-0 flex items-center bg-amber-50 p-3 rounded-lg">
+            <Coin className="text-amber-500 mr-2" size={20} />
+            <div>
+              <p className="text-sm text-gray-600">Your Supercoins</p>
+              <p className="font-bold text-amber-600">{profile.supercoins}</p>
+            </div>
+          </div>
         </div>
         
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="mb-8 bg-gray-100">
+          <TabsList className="mb-8 bg-gray-100 w-full overflow-x-auto flex whitespace-nowrap">
             <TabsTrigger value="profile" className="data-[state=active]:bg-white">
               <User size={16} className="mr-2" />
               Profile
@@ -152,6 +179,10 @@ const CustomerProfile: React.FC = () => {
             <TabsTrigger value="orders" className="data-[state=active]:bg-white">
               <ShoppingBag size={16} className="mr-2" />
               Order History
+            </TabsTrigger>
+            <TabsTrigger value="supercoins" className="data-[state=active]:bg-white">
+              <Coin size={16} className="mr-2" />
+              Supercoins
             </TabsTrigger>
           </TabsList>
           
@@ -230,6 +261,16 @@ const CustomerProfile: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
+                <div className="flex items-center mb-6">
+                  <Avatar className="h-20 w-20 mr-6">
+                    <AvatarImage src="https://source.unsplash.com/random/200x200/?face" />
+                    <AvatarFallback>{profile.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-xl font-semibold">{profile.name}</h3>
+                    <p className="text-gray-500">{profile.email}</p>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Full Name</p>
@@ -297,7 +338,7 @@ const CustomerProfile: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Payment Methods</h2>
               <button className="btn-primary text-sm py-1.5">
-                Add New Card
+                Add New Payment Method
               </button>
             </div>
             
@@ -310,8 +351,14 @@ const CustomerProfile: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-medium">{payment.type}</p>
-                      <p className="text-gray-600 mt-1">**** **** **** {payment.lastFour}</p>
-                      <p className="text-gray-500 text-sm mt-1">Expires: {payment.expiryDate}</p>
+                      {payment.type === 'UPI' ? (
+                        <p className="text-gray-600 mt-1">{payment.upiId}</p>
+                      ) : (
+                        <>
+                          <p className="text-gray-600 mt-1">**** **** **** {payment.lastFour}</p>
+                          <p className="text-gray-500 text-sm mt-1">Expires: {payment.expiryDate}</p>
+                        </>
+                      )}
                     </div>
                     <div className="flex space-x-3">
                       {!payment.isDefault && (
@@ -370,6 +417,115 @@ const CustomerProfile: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="supercoins" className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-6">Supercoins</h2>
+            
+            <div className="bg-amber-50 rounded-lg p-6 mb-8">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Coin className="text-amber-500 mr-3" size={30} />
+                  <div>
+                    <h3 className="font-bold text-xl">{profile.supercoins}</h3>
+                    <p className="text-sm text-gray-600">Available Supercoins</p>
+                  </div>
+                </div>
+                <Link to="#" className="text-food-primary hover:underline text-sm">View History</Link>
+              </div>
+            </div>
+            
+            <h3 className="font-semibold text-lg mb-4">Earn More Supercoins</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div className="border rounded-lg p-4 hover:shadow-md transition">
+                <div className="flex items-start">
+                  <div className="bg-blue-100 p-2 rounded mr-3">
+                    <ShoppingBag className="text-blue-500" size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Order Food</h4>
+                    <p className="text-sm text-gray-600 mt-1">Earn 10 Supercoins for every ₹100 spent on food orders</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border rounded-lg p-4 hover:shadow-md transition">
+                <div className="flex items-start">
+                  <div className="bg-green-100 p-2 rounded mr-3">
+                    <Gift className="text-green-500" size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Make a Donation</h4>
+                    <p className="text-sm text-gray-600 mt-1">Earn 50 Supercoins when you donate to a charity</p>
+                    <button 
+                      onClick={handleDonation}
+                      className="mt-2 text-sm bg-green-500 text-white py-1 px-3 rounded hover:bg-green-600"
+                    >
+                      Donate Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <h3 className="font-semibold text-lg mb-4">Redeem Supercoins</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="border rounded-lg overflow-hidden hover:shadow-md transition">
+                <div className="h-32 bg-gray-100">
+                  <img src="https://source.unsplash.com/random/300x200/?food" alt="Food discount" className="w-full h-full object-cover" />
+                </div>
+                <div className="p-3">
+                  <h4 className="font-medium">₹100 Off</h4>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="font-bold text-amber-600 flex items-center">
+                      <Coin size={14} className="mr-1" />
+                      200
+                    </span>
+                    <button className="text-sm bg-food-primary text-white py-1 px-3 rounded hover:bg-food-secondary">
+                      Redeem
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border rounded-lg overflow-hidden hover:shadow-md transition">
+                <div className="h-32 bg-gray-100">
+                  <img src="https://source.unsplash.com/random/300x200/?delivery" alt="Free delivery" className="w-full h-full object-cover" />
+                </div>
+                <div className="p-3">
+                  <h4 className="font-medium">Free Delivery (3 orders)</h4>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="font-bold text-amber-600 flex items-center">
+                      <Coin size={14} className="mr-1" />
+                      150
+                    </span>
+                    <button className="text-sm bg-food-primary text-white py-1 px-3 rounded hover:bg-food-secondary">
+                      Redeem
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border rounded-lg overflow-hidden hover:shadow-md transition">
+                <div className="h-32 bg-gray-100">
+                  <img src="https://source.unsplash.com/random/300x200/?dessert" alt="Free dessert" className="w-full h-full object-cover" />
+                </div>
+                <div className="p-3">
+                  <h4 className="font-medium">Free Dessert</h4>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="font-bold text-amber-600 flex items-center">
+                      <Coin size={14} className="mr-1" />
+                      100
+                    </span>
+                    <button className="text-sm bg-food-primary text-white py-1 px-3 rounded hover:bg-food-secondary">
+                      Redeem
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
