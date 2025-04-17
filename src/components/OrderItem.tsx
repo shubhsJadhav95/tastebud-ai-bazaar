@@ -1,6 +1,7 @@
 
 import React from "react";
 import { CartItem } from "../context/CartContext";
+import { IndianRupee } from "lucide-react";
 
 interface OrderItemProps {
   item: CartItem;
@@ -29,8 +30,14 @@ const OrderItem: React.FC<OrderItemProps> = ({
       <div className="ml-4 flex-grow">
         <h4 className="font-medium">{item.name}</h4>
         <div className="flex justify-between mt-1">
-          <span className="text-gray-600 text-sm">${item.price.toFixed(2)} x {item.quantity}</span>
-          <span className="font-semibold">${(item.price * item.quantity).toFixed(2)}</span>
+          <span className="text-gray-600 text-sm flex items-center">
+            <IndianRupee size={12} className="mr-1" />
+            {item.price.toFixed(2)} x {item.quantity}
+          </span>
+          <span className="font-semibold flex items-center">
+            <IndianRupee size={14} className="mr-1" />
+            {(item.price * item.quantity).toFixed(2)}
+          </span>
         </div>
       </div>
       

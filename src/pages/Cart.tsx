@@ -7,7 +7,8 @@ import OrderItem from "../components/OrderItem";
 import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 import { offers } from "../utils/mockData";
-import { ShoppingBag, Truck, CreditCard, Tag, X } from "lucide-react";
+import { ShoppingBag, Truck, CreditCard, Tag, X, IndianRupee } from "lucide-react";
+import { useIsMobile } from "../hooks/use-mobile";
 
 const Cart: React.FC = () => {
   const { cart, removeItem, updateQuantity, clearCart } = useCart();
@@ -16,9 +17,10 @@ const Cart: React.FC = () => {
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("card");
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
-  const deliveryFee = 2.99;
-  const tax = cart.totalAmount * 0.08;
+  const deliveryFee = 49;
+  const tax = cart.totalAmount * 0.05;
   
   // Calculate discount if coupon is applied
   const discount = appliedCoupon 
@@ -104,7 +106,7 @@ const Cart: React.FC = () => {
 
   if (cart.items.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <NavBar />
         <div className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -127,17 +129,17 @@ const Cart: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <NavBar />
       
-      <div className="flex-grow py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold mb-8">Your Cart</h1>
+      <div className="flex-grow py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <h1 className="text-xl font-bold mb-6">Your Cart</h1>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Cart Items */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">
+            <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+              <h2 className="text-lg font-semibold mb-3">
                 {cart.restaurantName} ({cart.items.length} {cart.items.length === 1 ? "item" : "items"})
               </h2>
               
@@ -156,8 +158,8 @@ const Cart: React.FC = () => {
             </div>
             
             {/* Delivery Info */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Delivery Information</h2>
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <h2 className="text-lg font-semibold mb-3">Delivery Information</h2>
               
               <div className="mb-4">
                 <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
@@ -165,7 +167,7 @@ const Cart: React.FC = () => {
                 </label>
                 <textarea
                   id="address"
-                  rows={2}
+                  rows={isMobile ? 2 : 3}
                   className="input-field"
                   placeholder="Enter your full delivery address"
                   value={deliveryAddress}
@@ -195,16 +197,16 @@ const Cart: React.FC = () => {
                   </div>
                   <div className="flex items-center">
                     <input
-                      id="paypal"
+                      id="upi"
                       name="paymentMethod"
                       type="radio"
                       className="h-4 w-4 text-food-primary focus:ring-food-primary"
-                      value="paypal"
-                      checked={paymentMethod === "paypal"}
-                      onChange={() => setPaymentMethod("paypal")}
+                      value="upi"
+                      checked={paymentMethod === "upi"}
+                      onChange={() => setPaymentMethod("upi")}
                     />
-                    <label htmlFor="paypal" className="ml-2 block text-sm text-gray-900">
-                      PayPal
+                    <label htmlFor="upi" className="ml-2 block text-sm text-gray-900">
+                      UPI
                     </label>
                   </div>
                   <div className="flex items-center">
@@ -228,21 +230,30 @@ const Cart: React.FC = () => {
           
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-24">
-              <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+            <div className="bg-white rounded-lg shadow-sm p-4 sticky top-20">
+              <h2 className="text-lg font-semibold mb-3">Order Summary</h2>
               
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3 mb-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span>${cart.totalAmount.toFixed(2)}</span>
+                  <span className="text-gray-600">Item Total</span>
+                  <span className="flex items-center">
+                    <IndianRupee size={14} className="mr-1" />
+                    {cart.totalAmount.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Delivery Fee</span>
-                  <span>${deliveryFee.toFixed(2)}</span>
+                  <span className="flex items-center">
+                    <IndianRupee size={14} className="mr-1" />
+                    {deliveryFee.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Tax</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span className="text-gray-600">GST (5%)</span>
+                  <span className="flex items-center">
+                    <IndianRupee size={14} className="mr-1" />
+                    {tax.toFixed(2)}
+                  </span>
                 </div>
                 
                 {appliedCoupon && (
@@ -256,19 +267,25 @@ const Cart: React.FC = () => {
                         <X size={14} />
                       </button>
                     </span>
-                    <span>-${discount.toFixed(2)}</span>
+                    <span className="flex items-center">
+                      -<IndianRupee size={14} className="mx-1" />
+                      {discount.toFixed(2)}
+                    </span>
                   </div>
                 )}
                 
-                <div className="border-t pt-4 flex justify-between font-bold">
+                <div className="border-t pt-3 flex justify-between font-bold">
                   <span>Total</span>
-                  <span>${totalAmount.toFixed(2)}</span>
+                  <span className="flex items-center">
+                    <IndianRupee size={16} className="mr-1" />
+                    {totalAmount.toFixed(2)}
+                  </span>
                 </div>
               </div>
               
               {/* Coupon */}
               {!appliedCoupon && (
-                <div className="mb-6">
+                <div className="mb-4">
                   <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-1">
                     Coupon Code
                   </label>
@@ -276,14 +293,14 @@ const Cart: React.FC = () => {
                     <input
                       type="text"
                       id="coupon"
-                      className="input-field rounded-r-none flex-grow"
+                      className="input-field rounded-r-none flex-grow text-sm"
                       placeholder="Enter coupon code"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
                     />
                     <button
                       onClick={handleApplyCoupon}
-                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-r-md"
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-3 rounded-r-md text-sm"
                       disabled={!couponCode}
                     >
                       Apply
@@ -303,10 +320,10 @@ const Cart: React.FC = () => {
                 disabled={!cart.items.length}
               >
                 <CreditCard size={18} className="mr-2" />
-                Proceed to Checkout
+                Place Order
               </button>
               
-              <div className="mt-4 text-center text-xs text-gray-500">
+              <div className="mt-3 text-center text-xs text-gray-500">
                 By placing your order, you agree to our Terms of Service and Privacy Policy
               </div>
             </div>
