@@ -5,19 +5,21 @@ import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
-import { MapPin, CreditCard, ShoppingBag, User, Save, Gift, Coin } from "lucide-react";
+import { MapPin, CreditCard, ShoppingBag, User, Save, Gift, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { 
   Tabs, 
   TabsContent, 
   TabsList, 
   TabsTrigger,
+} from "@/components/ui/tabs";
+import { 
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "@/components/ui/tabs";
+} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const CustomerProfile: React.FC = () => {
@@ -154,7 +156,7 @@ const CustomerProfile: React.FC = () => {
           </div>
           
           <div className="mt-4 md:mt-0 flex items-center bg-amber-50 p-3 rounded-lg">
-            <Coin className="text-amber-500 mr-2" size={20} />
+            <Coins className="text-amber-500 mr-2" size={20} />
             <div>
               <p className="text-sm text-gray-600">Your Supercoins</p>
               <p className="font-bold text-amber-600">{profile.supercoins}</p>
@@ -181,7 +183,7 @@ const CustomerProfile: React.FC = () => {
               Order History
             </TabsTrigger>
             <TabsTrigger value="supercoins" className="data-[state=active]:bg-white">
-              <Coin size={16} className="mr-2" />
+              <Coins size={16} className="mr-2" />
               Supercoins
             </TabsTrigger>
           </TabsList>
@@ -426,7 +428,7 @@ const CustomerProfile: React.FC = () => {
             <div className="bg-amber-50 rounded-lg p-6 mb-8">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <Coin className="text-amber-500 mr-3" size={30} />
+                  <Coins className="text-amber-500 mr-3" size={30} />
                   <div>
                     <h3 className="font-bold text-xl">{profile.supercoins}</h3>
                     <p className="text-sm text-gray-600">Available Supercoins</p>
@@ -481,7 +483,7 @@ const CustomerProfile: React.FC = () => {
                   <h4 className="font-medium">₹100 Off</h4>
                   <div className="flex justify-between items-center mt-2">
                     <span className="font-bold text-amber-600 flex items-center">
-                      <Coin size={14} className="mr-1" />
+                      <Coins size={14} className="mr-1" />
                       200
                     </span>
                     <button className="text-sm bg-food-primary text-white py-1 px-3 rounded hover:bg-food-secondary">
@@ -499,7 +501,7 @@ const CustomerProfile: React.FC = () => {
                   <h4 className="font-medium">Free Delivery (3 orders)</h4>
                   <div className="flex justify-between items-center mt-2">
                     <span className="font-bold text-amber-600 flex items-center">
-                      <Coin size={14} className="mr-1" />
+                      <Coins size={14} className="mr-1" />
                       150
                     </span>
                     <button className="text-sm bg-food-primary text-white py-1 px-3 rounded hover:bg-food-secondary">
@@ -517,7 +519,7 @@ const CustomerProfile: React.FC = () => {
                   <h4 className="font-medium">Free Dessert</h4>
                   <div className="flex justify-between items-center mt-2">
                     <span className="font-bold text-amber-600 flex items-center">
-                      <Coin size={14} className="mr-1" />
+                      <Coins size={14} className="mr-1" />
                       100
                     </span>
                     <button className="text-sm bg-food-primary text-white py-1 px-3 rounded hover:bg-food-secondary">
