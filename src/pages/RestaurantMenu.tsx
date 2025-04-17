@@ -18,6 +18,36 @@ import {
 // Import mock data to simulate database
 import { menuItems } from "../utils/mockData";
 
+// Helper function to get appropriate image URL based on food name
+const getImageForFoodName = (name: string): string => {
+  const lowerName = name.toLowerCase();
+  
+  if (lowerName.includes('paneer') || lowerName.includes('tikka')) {
+    return "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('dal') || lowerName.includes('lentil')) {
+    return "https://images.unsplash.com/photo-1626200824493-ffbbf1a2b4d7?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('biryani') || lowerName.includes('rice')) {
+    return "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('dosa') || lowerName.includes('idli')) {
+    return "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('naan') || lowerName.includes('roti') || lowerName.includes('bread')) {
+    return "https://images.unsplash.com/photo-1606491048802-8342506d6471?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('curry') || lowerName.includes('masala')) {
+    return "https://images.unsplash.com/photo-1565557623262-b51c2513a641?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('tandoori')) {
+    return "https://images.unsplash.com/photo-1628294896516-344152572ee8?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('sweet') || lowerName.includes('dessert') || lowerName.includes('gulab')) {
+    return "https://images.unsplash.com/photo-1627489316265-7829b9bbab2b?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('lassi') || lowerName.includes('drink')) {
+    return "https://images.unsplash.com/photo-1626451184843-73631124a73a?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('chaat') || lowerName.includes('samosa')) {
+    return "https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=2574&auto=format&fit=crop";
+  } else {
+    // Default Indian food image
+    return "https://images.unsplash.com/photo-1585937421612-70a008356c36?q=80&w=2574&auto=format&fit=crop";
+  }
+};
+
 const RestaurantMenu: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -34,7 +64,7 @@ const RestaurantMenu: React.FC = () => {
     name: "",
     description: "",
     price: 0,
-    image: "https://source.unsplash.com/random/300x200/?food",
+    image: "https://images.unsplash.com/photo-1585937421612-70a008356c36?q=80&w=2574&auto=format&fit=crop",
     calories: 0,
     nutrients: {
       protein: 0,
@@ -61,7 +91,15 @@ const RestaurantMenu: React.FC = () => {
       if (user.email === "posj2004@gmail.com") {
         // Use the first restaurant's menu items from mock data
         const restaurantId = Object.keys(menuItems)[0];
-        setMenuList(menuItems[restaurantId] || []);
+        const items = menuItems[restaurantId] || [];
+        
+        // Update images based on food names
+        const itemsWithUpdatedImages = items.map(item => ({
+          ...item,
+          image: getImageForFoodName(item.name)
+        }));
+        
+        setMenuList(itemsWithUpdatedImages);
       } else {
         // For other users, start with an empty menu
         setMenuList([]);
@@ -90,7 +128,30 @@ const RestaurantMenu: React.FC = () => {
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name.includes('.')) {
+    
+    if (name === "name" && currentItem) {
+      // Update image URL based on the name when name changes
+      const updatedImage = getImageForFoodName(value);
+      
+      if (name.includes('.')) {
+        // Handle nested object properties (nutrients)
+        const [parent, child] = name.split('.');
+        setCurrentItem({
+          ...currentItem,
+          [parent]: {
+            ...currentItem[parent],
+            [child]: value
+          },
+          image: updatedImage
+        });
+      } else {
+        setCurrentItem({
+          ...currentItem,
+          [name]: name === "price" || name === "calories" ? parseFloat(value) : value,
+          image: updatedImage
+        });
+      }
+    } else if (name.includes('.')) {
       // Handle nested object properties (nutrients)
       const [parent, child] = name.split('.');
       setCurrentItem({
@@ -202,7 +263,7 @@ const RestaurantMenu: React.FC = () => {
               <div key={item.id} className="bg-white border rounded-lg overflow-hidden flex animate-fade-in">
                 <div className="w-32 h-32 overflow-hidden">
                   <img 
-                    src={item.image} 
+                    src={item.image}
                     alt={item.name} 
                     className="w-full h-full object-cover"
                   />

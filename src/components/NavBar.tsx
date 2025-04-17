@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -12,7 +13,9 @@ import {
   UtensilsCrossed, 
   History, 
   Settings,
-  IndianRupee 
+  IndianRupee,
+  UserCircle,
+  Coins
 } from "lucide-react";
 
 const NavBar: React.FC = () => {
@@ -49,6 +52,10 @@ const NavBar: React.FC = () => {
                     </Link>
                     <Link to="/customer/orders" className="text-gray-700 hover:text-food-primary transition-colors">
                       Orders
+                    </Link>
+                    <Link to="/customer/profile" className="text-gray-700 hover:text-food-primary transition-colors">
+                      <UserCircle className="inline mr-1" size={18} />
+                      Profile
                     </Link>
                     <Link to="/cart" className="relative">
                       <ShoppingCart className="text-gray-700 hover:text-food-primary transition-colors" />
@@ -119,6 +126,14 @@ const NavBar: React.FC = () => {
                     >
                       <Home size={18} className="mr-2" />
                       <span>Home</span>
+                    </Link>
+                    <Link 
+                      to="/customer/profile" 
+                      className="flex items-center text-gray-700 hover:text-food-primary transition-colors py-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <UserCircle size={18} className="mr-2" />
+                      <span>Profile</span>
                     </Link>
                     <Link 
                       to="/customer/orders" 

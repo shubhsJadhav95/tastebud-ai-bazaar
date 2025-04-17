@@ -16,6 +16,36 @@ interface MenuItemProps {
   item: MenuItemType;
 }
 
+// Map of food names to appropriate image URLs
+const getImageForFoodName = (name: string): string => {
+  const lowerName = name.toLowerCase();
+  
+  if (lowerName.includes('paneer') || lowerName.includes('tikka')) {
+    return "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('dal') || lowerName.includes('lentil')) {
+    return "https://images.unsplash.com/photo-1626200824493-ffbbf1a2b4d7?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('biryani') || lowerName.includes('rice')) {
+    return "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('dosa') || lowerName.includes('idli')) {
+    return "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('naan') || lowerName.includes('roti') || lowerName.includes('bread')) {
+    return "https://images.unsplash.com/photo-1606491048802-8342506d6471?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('curry') || lowerName.includes('masala')) {
+    return "https://images.unsplash.com/photo-1565557623262-b51c2513a641?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('tandoori')) {
+    return "https://images.unsplash.com/photo-1628294896516-344152572ee8?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('sweet') || lowerName.includes('dessert') || lowerName.includes('gulab')) {
+    return "https://images.unsplash.com/photo-1627489316265-7829b9bbab2b?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('lassi') || lowerName.includes('drink')) {
+    return "https://images.unsplash.com/photo-1626451184843-73631124a73a?q=80&w=2574&auto=format&fit=crop";
+  } else if (lowerName.includes('chaat') || lowerName.includes('samosa')) {
+    return "https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=2574&auto=format&fit=crop";
+  } else {
+    // Default Indian food image
+    return "https://images.unsplash.com/photo-1585937421612-70a008356c36?q=80&w=2574&auto=format&fit=crop";
+  }
+};
+
 const MenuItem: React.FC<MenuItemProps> = ({ item }) => {
   const { addItem } = useCart();
 
@@ -26,11 +56,14 @@ const MenuItem: React.FC<MenuItemProps> = ({ item }) => {
     toast.success(`Added ${item.name} to cart`);
   };
 
+  // Use the function to get a more appropriate image based on the food name
+  const foodImage = item.image.includes("unsplash") ? getImageForFoodName(item.name) : item.image;
+
   return (
     <div className="menu-item-card animate-fade-in">
       <div className="relative h-24 w-24 min-w-24 overflow-hidden rounded-l-lg">
         <img
-          src={item.image}
+          src={foodImage}
           alt={item.name}
           className="w-full h-full object-cover"
         />

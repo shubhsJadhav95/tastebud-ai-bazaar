@@ -45,6 +45,7 @@ interface CartContextType {
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   itemCount: number;
+  addSupercoins: (amount: number) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -171,9 +172,6 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       };
     }
     
-    case "CLEAR_CART":
-      return initialState;
-      
     default:
       return state;
   }
@@ -220,6 +218,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           });
         }
+        
+        // Restore supercoins if available
+        if (parsedCart.supercoins && typeof parsedCart.supercoins === 'number') {
+          dispatch({ type: "ADD_SUPERCOINS", payload: parsedCart.supercoins });
+        }
       } catch (error) {
         console.error("Error parsing cart from localStorage:", error);
         localStorage.removeItem("cart");
@@ -248,6 +251,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: "CLEAR_CART" });
   };
   
+  const addSupercoins = (amount: number) => {
+    dispatch({ type: "ADD_SUPERCOINS", payload: amount });
+  };
+  
   const itemCount = cart.items.reduce((count, item) => count + item.quantity, 0);
   
   return (
@@ -258,7 +265,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeItem,
         updateQuantity,
         clearCart,
-        itemCount
+        itemCount,
+        addSupercoins
       }}
     >
       {children}
