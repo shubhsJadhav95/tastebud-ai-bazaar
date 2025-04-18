@@ -82,10 +82,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (data) {
-        setProfile(data as UserProfile);
-        // Use the correct type for setUserType
-        const userTypeValue = data.user_type as UserType;
-        setUserType(userTypeValue);
+        // Properly map the data to match our UserProfile interface
+        const userProfile: UserProfile = {
+          id: data.id,
+          email: data.email,
+          full_name: data.full_name,
+          user_type: data.user_type as UserType,
+          address: data.address || null,
+          phone: data.phone || null
+        };
+        
+        setProfile(userProfile);
+        setUserType(userProfile.user_type);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
