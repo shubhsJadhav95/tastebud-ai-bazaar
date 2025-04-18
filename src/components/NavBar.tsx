@@ -1,8 +1,8 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useCart } from "../context/CartContext";
+import { toast } from "sonner";
 import { 
   ShoppingCart, 
   User, 
@@ -13,21 +13,31 @@ import {
   UtensilsCrossed, 
   History, 
   Settings,
-  IndianRupee,
-  UserCircle,
-  Coins
+  UserCircle
 } from "lucide-react";
 
 const NavBar: React.FC = () => {
-  const { user, profile, logout, userType } = useAuth();
+  const { user, profile, signOut, loading: authLoading } = useAuthContext();
   const { itemCount } = useCart();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const userType = profile?.user_type;
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate("/");
+      setMobileMenuOpen(false);
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Logout failed. Please try again.");
+    }
   };
+
+  if (authLoading) {
+    return <nav className="bg-white shadow-md py-4 px-6 sticky top-0 z-50">Loading Nav...</nav>;
+  }
 
   return (
     <nav className="bg-white shadow-md py-4 px-6 sticky top-0 z-50">
@@ -38,7 +48,7 @@ const NavBar: React.FC = () => {
               to={userType === "customer" ? "/customer/home" : userType === "restaurant" ? "/restaurant/dashboard" : "/"} 
               className="flex items-center"
             >
-              <span className="text-food-primary text-2xl font-bold">Swadisht</span>
+              <span className="text-food-primary text-2xl font-bold">Tastebud AI</span>
             </Link>
           </div>
 
@@ -104,6 +114,16 @@ const NavBar: React.FC = () => {
           </div>
 
           <div className="md:hidden">
+            {user && userType === 'customer' && (
+              <Link to="/cart" className="relative mr-4 text-gray-700 hover:text-food-primary transition-colors">
+                <ShoppingCart />
+                {itemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-food-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {itemCount}
+                  </span>
+                )}
+              </Link>
+            )}
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="text-gray-700"

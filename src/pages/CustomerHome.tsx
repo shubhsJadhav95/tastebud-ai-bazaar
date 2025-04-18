@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useAllRestaurants } from "@/hooks/useAllRestaurants";
-import { Restaurant } from "@/types";
-import NavBar from "../components/NavBar";
-import Footer from "../components/Footer";
-import RestaurantCard from "../components/RestaurantCard";
-import AIRecommendation from "../components/AIRecommendation";
+import { Restaurant as RestaurantType } from "@/types";
+import NavBar from "@/components/NavBar";
+import Footer from "@/components/Footer";
+import RestaurantCard from "@/components/RestaurantCard";
+import AIRecommendation from "@/components/AIRecommendation";
 import { offers, cuisineFilters } from "../utils/mockData";
 import { Search, Filter, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -14,11 +14,11 @@ import { toast } from "sonner";
 const CustomerHome: React.FC = () => {
   const { user, profile, loading: authLoading } = useAuthContext();
   const navigate = useNavigate();
-  const { restaurants, isLoading: restaurantsLoading } = useAllRestaurants();
+  const { restaurants, loading: restaurantsLoading, error: restaurantsError } = useAllRestaurants();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCuisine, setSelectedCuisine] = useState("All");
-  const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
+  const [filteredRestaurants, setFilteredRestaurants] = useState<RestaurantType[]>([]);
   const [userLocation, setUserLocation] = useState("123 MG Road, Bengaluru");
 
   // Redirect if not authenticated or not a customer
@@ -35,12 +35,15 @@ const CustomerHome: React.FC = () => {
 
   // Filter restaurants based on search term and cuisine
   useEffect(() => {
-    if (!restaurants) return;
+    if (!restaurants || restaurantsLoading || restaurantsError) {
+        setFilteredRestaurants([]);
+        return;
+    }
     
     const results = restaurants.filter(restaurant => {
-      const matchesSearch = 
-        restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (restaurant.cuisine?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+      const nameMatch = restaurant.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+      const cuisineMatch = restaurant.cuisine?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+      const matchesSearch = nameMatch || cuisineMatch;
       
       const matchesCuisine = selectedCuisine === "All" || restaurant.cuisine === selectedCuisine;
       
@@ -48,7 +51,7 @@ const CustomerHome: React.FC = () => {
     });
     
     setFilteredRestaurants(results);
-  }, [searchTerm, selectedCuisine, restaurants]);
+  }, [searchTerm, selectedCuisine, restaurants, restaurantsLoading, restaurantsError]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -145,7 +148,7 @@ const CustomerHome: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-bold mb-6">Restaurants Near You</h2>
             
-            {restaurantsLoading ? (
+            {restaurantsLoading && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3, 4, 5, 6].map((item) => (
                   <div key={item} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
@@ -162,26 +165,30 @@ const CustomerHome: React.FC = () => {
                   </div>
                 ))}
               </div>
-            ) : filteredRestaurants.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No restaurants found matching your search criteria.</p>
+            )}
+
+            {!restaurantsLoading && restaurantsError && (
+              <div className="text-center py-8 text-red-600">
+                <p>Error loading restaurants: {restaurantsError}</p>
               </div>
-            ) : (
+            )}
+
+            {!restaurantsLoading && !restaurantsError && filteredRestaurants.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">
+                  {searchTerm || selectedCuisine !== 'All' 
+                    ? "No restaurants found matching your search criteria."
+                    : "No restaurants available at the moment."} 
+                </p>
+              </div>
+            )}
+
+            {!restaurantsLoading && !restaurantsError && filteredRestaurants.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredRestaurants.map((restaurant) => (
                   <RestaurantCard 
                     key={restaurant.id} 
-                    restaurant={{
-                      id: restaurant.id,
-                      name: restaurant.name,
-                      cuisine: restaurant.cuisine || "Various",
-                      rating: 4.5, // Default rating since we don't have it in the database yet
-                      deliveryTime: restaurant.delivery_time || "30-45 min",
-                      priceRange: restaurant.price_range || "$$",
-                      image: restaurant.image_url || "https://placehold.co/600x400/png?text=Restaurant",
-                      description: restaurant.description || "A lovely restaurant with delicious food.",
-                      address: restaurant.address || "Address not provided"
-                    }} 
+                    restaurant={restaurant} 
                   />
                 ))}
               </div>

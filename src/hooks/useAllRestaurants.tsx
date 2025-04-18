@@ -1,62 +1,58 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import {
+  collection, query, orderBy, onSnapshot, FirestoreError
+} from 'firebase/firestore';
 import { db } from '@/integrations/firebase/client';
-import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
-// Import the shared Restaurant type
-import { Restaurant } from '@/types';
+import { Restaurant } from '@/types'; // Use shared type
 
-// Re-using the Restaurant interface (consider moving to a shared types file)
-export interface Restaurant {
-  id: string;
-  owner_id: string;
-  name: string;
-  description: string | null;
-  cuisine: string | null;
-  address: string | null;
-  image_url: string | null;
-  logo_url: string | null;
-  price_range: string | null;
-  delivery_time: string | null;
-  phone: string | null;
-  created_at: Timestamp;
-  updated_at: Timestamp;
+interface AllRestaurantsHookState {
+  restaurants: Restaurant[];
+  loading: boolean;
+  error: string | null;
 }
 
+// Renamed for clarity if you also have a hook for a single restaurant owner
 export const useAllRestaurants = () => {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<AllRestaurantsHookState>({
+    restaurants: [],
+    loading: true,
+    error: null,
+  });
 
   useEffect(() => {
-    setIsLoading(true);
+    setState(prev => ({ ...prev, loading: true, error: null }));
     console.log("Setting up listener for all restaurants.");
-    const restaurantsRef = collection(db, 'restaurants');
-    // Query to get all restaurants, ordered by name
-    const q = query(restaurantsRef, orderBy('name'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      console.log("All restaurants snapshot received. Docs count:", snapshot.docs.length);
-      const restaurantsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Restaurant[]; // Firestore Timestamps are handled correctly
-      
-      setRestaurants(restaurantsData);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Error listening to all restaurants updates:", error);
-      toast.error("Error fetching restaurants list.");
-      setIsLoading(false);
-    });
+    const restaurantsCollectionRef = collection(db, 'restaurants');
+    const q = query(restaurantsCollectionRef, orderBy('name', 'asc')); // Order by name A-Z
 
-    // Cleanup listener on component unmount
+    const unsubscribe = onSnapshot(q,
+      (querySnapshot) => {
+        console.log(`All restaurants snapshot received (${querySnapshot.docs.length} docs)`);
+        const restaurantsData = querySnapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        })) as Restaurant[]; // Use shared type
+        setState({ restaurants: restaurantsData, loading: false, error: null });
+      },
+      (err) => {
+        console.error("Error listening to all restaurants:", err);
+        const firestoreError = err as FirestoreError;
+        const errorMessage = firestoreError.message || 'Failed to fetch restaurants list.';
+        setState({ restaurants: [], loading: false, error: errorMessage });
+        toast.error(errorMessage); // Show feedback
+      }
+    );
+
+    // Cleanup listener on unmount
     return () => {
       console.log("Cleaning up listener for all restaurants.");
       unsubscribe();
     };
-  }, []); // Empty dependency array means this runs once on mount
+  }, []); // Run only once on mount
 
   return {
-    restaurants,
-    isLoading,
+    ...state, // restaurants, loading, error
   };
 }; 

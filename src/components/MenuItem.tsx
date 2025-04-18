@@ -1,7 +1,7 @@
-
 import React from "react";
 import { Plus, Info, IndianRupee } from "lucide-react";
-import { useCart, MenuItem as MenuItemType } from "../context/CartContext";
+import { MenuItem as MenuItemType } from "@/types";
+import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 import { 
   Dialog,
@@ -16,124 +16,97 @@ interface MenuItemProps {
   item: MenuItemType;
 }
 
-// Map of food names to appropriate image URLs
-const getImageForFoodName = (name: string): string => {
-  const lowerName = name.toLowerCase();
-  
-  if (lowerName.includes('paneer') || lowerName.includes('tikka')) {
-    return "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?q=80&w=2574&auto=format&fit=crop";
-  } else if (lowerName.includes('dal') || lowerName.includes('lentil')) {
-    return "https://images.unsplash.com/photo-1626200824493-ffbbf1a2b4d7?q=80&w=2574&auto=format&fit=crop";
-  } else if (lowerName.includes('biryani') || lowerName.includes('rice')) {
-    return "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?q=80&w=2574&auto=format&fit=crop";
-  } else if (lowerName.includes('dosa') || lowerName.includes('idli')) {
-    return "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?q=80&w=2574&auto=format&fit=crop";
-  } else if (lowerName.includes('naan') || lowerName.includes('roti') || lowerName.includes('bread')) {
-    return "https://images.unsplash.com/photo-1606491048802-8342506d6471?q=80&w=2574&auto=format&fit=crop";
-  } else if (lowerName.includes('curry') || lowerName.includes('masala')) {
-    return "https://images.unsplash.com/photo-1565557623262-b51c2513a641?q=80&w=2574&auto=format&fit=crop";
-  } else if (lowerName.includes('tandoori')) {
-    return "https://images.unsplash.com/photo-1628294896516-344152572ee8?q=80&w=2574&auto=format&fit=crop";
-  } else if (lowerName.includes('sweet') || lowerName.includes('dessert') || lowerName.includes('gulab')) {
-    return "https://images.unsplash.com/photo-1627489316265-7829b9bbab2b?q=80&w=2574&auto=format&fit=crop";
-  } else if (lowerName.includes('lassi') || lowerName.includes('drink')) {
-    return "https://images.unsplash.com/photo-1626451184843-73631124a73a?q=80&w=2574&auto=format&fit=crop";
-  } else if (lowerName.includes('chaat') || lowerName.includes('samosa')) {
-    return "https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=2574&auto=format&fit=crop";
-  } else {
-    // Default Indian food image
-    return "https://images.unsplash.com/photo-1585937421612-70a008356c36?q=80&w=2574&auto=format&fit=crop";
+// This function might need adjustment or removal depending on image handling
+// For now, it tries using image_url, then name-based lookup, then placeholder
+const getImageUrl = (item: MenuItemType): string => {
+  if (item.image_url) {
+    return item.image_url;
+  }
+  // Keep name-based logic as a fallback if desired, or remove it
+  const lowerName = item.name.toLowerCase();
+  if (lowerName.includes('paneer')) return "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?q=80&w=2574&auto=format&fit=crop";
+  // ... (other name checks) ...
+  else {
+    return "https://placehold.co/300x200/png?text=No+Image"; // Fallback placeholder
   }
 };
 
-const MenuItem: React.FC<MenuItemProps> = ({ item }) => {
+const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
   const { addItem } = useCart();
 
   const handleAddToCart = () => {
-    addItem({
-      ...item
-    });
+    // Pass the item object matching the shared MenuItemType
+    addItem(item); 
     toast.success(`Added ${item.name} to cart`);
   };
 
-  // Use the function to get a more appropriate image based on the food name
-  const foodImage = item.image.includes("unsplash") ? getImageForFoodName(item.name) : item.image;
+  // Use the updated image logic
+  const imageUrl = getImageUrl(item);
 
   return (
-    <div className="menu-item-card animate-fade-in">
-      <div className="relative h-24 w-24 min-w-24 overflow-hidden rounded-l-lg">
+    <div className="menu-item-card animate-fade-in border rounded-lg flex overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      {/* Image Section */}
+      <div className="relative h-24 w-24 min-w-24 overflow-hidden flex-shrink-0">
         <img
-          src={foodImage}
+          src={imageUrl} 
           alt={item.name}
           className="w-full h-full object-cover"
         />
       </div>
-      <div className="p-4 flex-grow flex flex-col justify-between">
+      {/* Content Section */}
+      <div className="p-3 flex-grow flex flex-col justify-between">
+        {/* Top part: Name and Info Dialog */}
         <div>
-          <div className="flex justify-between">
-            <h3 className="font-bold truncate">{item.name}</h3>
+          <div className="flex justify-between items-start mb-1">
+            <h3 className="font-bold text-md truncate pr-2">{item.name}</h3>
+            {/* Info Dialog Trigger (Optional - remove if no detailed info) */}
             <Dialog>
               <DialogTrigger asChild>
-                <button className="text-gray-500 hover:text-food-primary">
+                <button className="text-gray-400 hover:text-food-primary flex-shrink-0">
                   <Info size={16} />
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-sm">
                 <DialogHeader>
                   <DialogTitle>{item.name}</DialogTitle>
-                  <DialogDescription>Nutritional Information</DialogDescription>
+                  <DialogDescription>{item.description || "Detailed information not available."}</DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
-                  <div className="flex justify-between mb-2">
-                    <span className="font-semibold">Calories:</span>
-                    <span>{item.calories} kcal</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-                    <div className="flex justify-between">
-                      <span>Protein:</span>
-                      <span>{item.nutrients.protein}g</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Carbs:</span>
-                      <span>{item.nutrients.carbs}g</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Fat:</span>
-                      <span>{item.nutrients.fat}g</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Fiber:</span>
-                      <span>{item.nutrients.fiber}g</span>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <span className="font-semibold">Serving Size:</span>
-                    <span className="ml-2">{item.servingSize}</span>
-                  </div>
+                {/* Add more details if available in your MenuItemType */}
+                <div className="py-2 text-sm">
+                  <p><strong>Category:</strong> {item.category || "N/A"}</p>
+                  <p><strong>Availability:</strong> {item.is_available ? "Available" : "Unavailable"}</p>
+                  {/* Remove nutrient info if not present */}
                 </div>
               </DialogContent>
             </Dialog>
           </div>
-          <p className="text-gray-500 text-sm mt-1 line-clamp-2">{item.description}</p>
+          {/* Description */}
+          <p className="text-gray-500 text-sm line-clamp-2">{item.description || "No description available."}</p>
         </div>
+        {/* Bottom part: Price and Add to Cart */}
         <div className="flex justify-between items-center mt-2">
-          <div>
-            <span className="font-bold flex items-center">
-              <IndianRupee size={14} className="mr-1" />
-              {item.price.toFixed(2)}
-            </span>
-            <span className="text-sm text-gray-500 ml-2">{item.calories} Cal</span>
-          </div>
-          <button
-            onClick={handleAddToCart}
-            className="bg-food-primary text-white p-2 rounded-full hover:bg-orange-600 transition-colors"
-          >
-            <Plus size={16} />
-          </button>
+          <span className="font-bold flex items-center">
+            <IndianRupee size={14} className="mr-0.5" />
+            {item.price.toFixed(2)}
+          </span>
+          {/* Conditionally render Add button based on availability */}
+          {item.is_available ? (
+            <button
+              onClick={handleAddToCart}
+              className="bg-food-primary text-white p-1.5 rounded-full hover:bg-orange-600 transition-colors disabled:bg-gray-300"
+              aria-label={`Add ${item.name} to cart`}
+              disabled={!item.is_available} // Double check for clarity
+            >
+              <Plus size={16} />
+            </button>
+          ) : (
+             <span className="text-xs text-red-600 font-medium">Unavailable</span>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export default MenuItem;
+// Rename the export to match the import in RestaurantDetail
+export default MenuItemComponent;

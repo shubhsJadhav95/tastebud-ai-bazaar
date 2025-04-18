@@ -18,6 +18,7 @@ import RestaurantProfile from "./pages/RestaurantProfile";
 import CustomerProfile from "./pages/CustomerProfile";
 import Cart from "./pages/Cart";
 import OrderTracking from "./pages/OrderTracking";
+import RestaurantOrders from "./pages/RestaurantOrders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
               <Route path="/restaurant/menu" element={<RestaurantMenu />} />
               <Route path="/restaurant/profile" element={<RestaurantProfile />} />
+              <Route path="/restaurant/orders" element={<RestaurantOrders />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/order-tracking" element={<OrderTracking />} />
               <Route path="*" element={<NotFound />} />

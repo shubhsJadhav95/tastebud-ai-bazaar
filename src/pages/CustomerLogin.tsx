@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import NavBar from "../components/NavBar";
-import Footer from "../components/Footer";
+import NavBar from "@/components/NavBar";
+import Footer from "@/components/Footer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,9 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserProfile } from "@/types";
+import { Separator } from "@/components/ui/separator";
+import { Chrome } from "lucide-react";
 
 const CustomerLogin: React.FC = () => {
   // Login state
@@ -31,17 +33,44 @@ const CustomerLogin: React.FC = () => {
   const [fullName, setFullName] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
   
-  const { login, signup, isAuthenticated, userType } = useAuth();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  
+  const { signIn, signUp, signInWithGoogle, user, profile, loading: authLoading, error: authError } = useAuthContext();
   const navigate = useNavigate();
 
   // Redirect if already logged in
   useEffect(() => {
-    if (isAuthenticated && userType === "customer") {
-      navigate("/customer/home");
-    } else if (isAuthenticated && userType === "restaurant") {
-      navigate("/restaurant/dashboard");
+    console.log('Auth state changed:', { 
+      user: user?.uid, 
+      profileType: profile?.user_type,
+      isLoading: authLoading 
+    });
+    
+    if (authLoading) {
+      console.log('Still loading auth state...');
+      return;
     }
-  }, [isAuthenticated, userType, navigate]);
+    
+    if (user && profile?.user_type === "customer") {
+      console.log('Redirecting to customer home...');
+      navigate("/customer/home");
+    } else if (user && profile?.user_type === "restaurant") {
+      console.log('Redirecting to restaurant dashboard...');
+      navigate("/restaurant/dashboard");
+    } else if (user && !profile) {
+      console.log('User is authenticated but no profile found');
+    }
+  }, [user, profile, authLoading, navigate]);
+
+  // Display auth error if present
+  useEffect(() => {
+    if (authError) {
+      // Use toast or another method to display the error from the context
+      const message = typeof authError === 'string' ? authError : authError.message;
+      toast.error(message || "An authentication error occurred.");
+      // Consider clearing the error in the context if needed after showing it
+    }
+  }, [authError]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,16 +83,21 @@ const CustomerLogin: React.FC = () => {
     setIsLoggingIn(true);
 
     try {
-      const success = await login(email, password, "customer");
-
-      if (success) {
-        toast.success("Login successful!");
-        navigate("/customer/home");
+      // Pass "customer" as the user type for customer login
+      const success = await signIn(email, password, "customer");
+      
+      if (!success) {
+        // If login returns false, show a generic error
+        toast.error("Login failed. Please check your credentials and try again.");
+        setIsLoggingIn(false);
+        return;
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("An unexpected error occurred");
-    } finally {
+
+      // Success case is handled by the useEffect watching user/profile in this component
+      toast.success("Login successful!");
+    } catch (error: any) { 
+      console.error("Login error caught in component:", error);
+      toast.error(error.message || "Failed to login. Please try again.");
       setIsLoggingIn(false);
     }
   };
@@ -71,7 +105,6 @@ const CustomerLogin: React.FC = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
     if (!signupEmail || !signupPassword || !confirmPassword) {
       toast.error("Please fill all required fields");
       return;
@@ -90,20 +123,41 @@ const CustomerLogin: React.FC = () => {
     setIsSigningUp(true);
 
     try {
-      const success = await signup(signupEmail, signupPassword, "customer", fullName);
-
-      if (success) {
-        toast.success("Account created! You are now logged in");
-        navigate("/customer/home");
-      } else {
-        // Make sure to reset loading state on failure
+      // Pass "customer" as the user type for customer signup
+      const success = await signUp(signupEmail, signupPassword, "customer", fullName);
+      
+      if (!success) {
+        toast.error("Failed to create account. Please try again.");
         setIsSigningUp(false);
+        return;
       }
-    } catch (error) {
-      console.error("Signup error:", error);
-      toast.error("An unexpected error occurred");
+
+      // Success case is handled by the useEffect watching user/profile
+      toast.success("Account created successfully!");
+    } catch (error: any) {
+      console.error("Signup error caught in component:", error);
+      toast.error(error.message || "Failed to create account. Please try again.");
       setIsSigningUp(false);
     }
+  };
+
+  // New handler for Google Sign-In button
+  const handleGoogleSignIn = async () => {
+      setIsGoogleLoading(true);
+      try {
+          await signInWithGoogle();
+          // Redirect is handled by useEffect
+          // toast.success("Signed in with Google!"); // Optional success toast
+      } catch (error) {
+          // Error is displayed by the authError useEffect
+          console.error("Google Sign-In error caught in component:", error);
+          // Don't show generic toast if user just closed popup
+          if ((error as any)?.code !== 'auth/popup-closed-by-user') {
+             toast.error("Google Sign-In failed. Please try again.");
+          }
+      } finally {
+          setIsGoogleLoading(false);
+      }
   };
 
   return (
@@ -171,14 +225,39 @@ const CustomerLogin: React.FC = () => {
                   </div>
                 </CardContent>
                 
-                <CardFooter>
+                <CardFooter className="flex-col items-stretch gap-4">
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={isLoggingIn}
+                    disabled={isLoggingIn || authLoading}
                   >
                     {isLoggingIn ? "Signing in..." : "Sign in"}
                   </Button>
+
+                  <div className="relative my-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Or continue with
+                      </span>
+                    </div>
+                  </div>
+                  <Button 
+                     variant="outline" 
+                     className="w-full" 
+                     type="button" 
+                     onClick={handleGoogleSignIn}
+                     disabled={isGoogleLoading || authLoading}
+                   >
+                     {isGoogleLoading ? (
+                       <span className="animate-spin h-4 w-4 mr-2 border-t-2 border-b-2 border-primary rounded-full"></span> 
+                     ) : (
+                       <Chrome className="mr-2 h-4 w-4" />
+                     )}
+                     Google
+                   </Button>
                 </CardFooter>
               </form>
             </TabsContent>
@@ -239,7 +318,7 @@ const CustomerLogin: React.FC = () => {
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={isSigningUp}
+                    disabled={isSigningUp || authLoading}
                   >
                     {isSigningUp ? "Creating Account..." : "Create Account"}
                   </Button>

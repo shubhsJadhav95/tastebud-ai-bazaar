@@ -21,3 +21,14 @@ export interface AuthContextType {
   isLoading: boolean;
   userType: UserType;
 }
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterCredentials extends LoginCredentials {
+  // Add any additional fields needed for registration, e.g.:
+  // fullName?: string;
+  // userType?: string;
+}

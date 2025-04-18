@@ -14,7 +14,7 @@ import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 
 const CustomerProfile: React.FC = () => {
-  const { user, profile, loading } = useAuthContext();
+  const { user, profile, loading, error: authError } = useAuthContext();
   const navigate = useNavigate();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -52,6 +52,14 @@ const CustomerProfile: React.FC = () => {
       });
     }
   }, [loading, user, profile, navigate]);
+  
+  // Display auth error if present
+  useEffect(() => {
+    if (authError) {
+      const message = typeof authError === 'string' ? authError : authError.message;
+      toast.error(message || "An authentication error occurred.");
+    }
+  }, [authError]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

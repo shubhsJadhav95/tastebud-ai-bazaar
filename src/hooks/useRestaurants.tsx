@@ -1,37 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuthContext } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import {
+  collection, query, where, onSnapshot, addDoc, updateDoc, doc, getDocs,
+  serverTimestamp, limit, FirestoreError, Timestamp
+} from 'firebase/firestore';
 import { db } from '@/integrations/firebase/client';
-import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc, getDocs, serverTimestamp, limit } from 'firebase/firestore';
+import { useAuthContext } from "@/contexts/AuthContext";
+import { Restaurant } from '@/types'; // Use shared type
 
-export interface Restaurant {
-  id: string;
-  owner_id: string;
-  name: string;
-  description: string | null;
-  cuisine: string | null;
-  address: string | null;
-  image_url: string | null;
-  logo_url: string | null;
-  price_range: string | null;
-  delivery_time: string | null;
-  phone: string | null;
-  created_at: any;
-  updated_at: any;
+interface MyRestaurantHookState {
+  myRestaurant: Restaurant | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
-export const useRestaurants = () => {
-  const { user } = useAuthContext();
-  const [isLoading, setIsLoading] = useState(true);
-  const [myRestaurant, setMyRestaurant] = useState<Restaurant | null>(null);
+// This hook is for fetching and managing the restaurant owned by the logged-in user.
+export const useMyRestaurant = () => {
+  const { user } = useAuthContext(); // Get the logged-in user
+  const [state, setState] = useState<MyRestaurantHookState>({
+    myRestaurant: null,
+    isLoading: true, // Start loading true until data is fetched or confirmed non-existent
+    error: null,
+  });
+  // Keep track of the specific restaurant ID once found for the listener
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
-  
-  // Fetch restaurant by owner ID using useCallback
+
+  // Fetch restaurant by owner ID
   const fetchMyRestaurant = useCallback(async (userId: string) => {
-    setIsLoading(true);
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
     console.log("Fetching restaurant for user:", userId);
     const restaurantsRef = collection(db, 'restaurants');
-    // Query for restaurant owned by the user
     const q = query(restaurantsRef, where('owner_id', '==', userId), limit(1));
 
     try {
@@ -39,137 +37,145 @@ export const useRestaurants = () => {
       if (!querySnapshot.empty) {
         const docSnap = querySnapshot.docs[0];
         console.log("Restaurant found:", docSnap.id);
+        // Set ID to trigger listener
         setRestaurantId(docSnap.id);
-        setMyRestaurant({ id: docSnap.id, ...docSnap.data() } as Restaurant);
+        // Set initial data (listener will update)
+        setState(prev => ({ 
+          ...prev, 
+          myRestaurant: { id: docSnap.id, ...docSnap.data() } as Restaurant, 
+          isLoading: false, // We have initial data, listener will refine
+          error: null 
+        }));
       } else {
         console.log("No restaurant found for this user.");
-        setMyRestaurant(null);
-        setRestaurantId(null);
+        setRestaurantId(null); // Ensure listener doesn't run
+        setState({ myRestaurant: null, isLoading: false, error: null });
       }
-    } catch (error) {
-      console.error('Error fetching my restaurant:', error);
-      toast.error('Failed to load your restaurant information.');
-      setMyRestaurant(null);
+    } catch (err) {
+      console.error('Error fetching my restaurant:', err);
+      const firestoreError = err as FirestoreError;
+      const errorMessage = firestoreError.message || 'Failed to load your restaurant information.';
+      setState({ myRestaurant: null, isLoading: false, error: errorMessage });
+      toast.error(errorMessage);
       setRestaurantId(null);
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+  }, []); // useCallback dependency array
 
-  // Effect to fetch restaurant when user logs in
+  // Effect to fetch restaurant when user logs in or changes
   useEffect(() => {
     if (user?.uid) {
       fetchMyRestaurant(user.uid);
     } else {
       // Clear restaurant data if user logs out
-      setMyRestaurant(null);
       setRestaurantId(null);
-      setIsLoading(false);
+      setState({ myRestaurant: null, isLoading: false, error: null });
     }
   }, [user?.uid, fetchMyRestaurant]);
 
-  // Effect for real-time updates on the fetched restaurant
+  // Effect for real-time updates on the specific restaurant document
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId) {
+      // No restaurant to listen to, ensure loading is false if fetch failed or user has no restaurant
+      if(state.isLoading && !user?.uid) setState(prev => ({...prev, isLoading: false}));
+      return; 
+    }
 
     console.log("Setting up listener for restaurant:", restaurantId);
+    // We already set isLoading: true in fetchMyRestaurant, listener will set it to false
     const restaurantDocRef = doc(db, 'restaurants', restaurantId);
     
-    const unsubscribe = onSnapshot(restaurantDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        console.log("Restaurant data updated:", docSnap.id);
-        setMyRestaurant({ id: docSnap.id, ...docSnap.data() } as Restaurant);
-      } else {
-        // Handle case where the restaurant might be deleted
-        console.log("Restaurant document deleted.");
-        setMyRestaurant(null);
-        setRestaurantId(null); 
+    const unsubscribe = onSnapshot(restaurantDocRef, 
+      (docSnap) => {
+        if (docSnap.exists()) {
+          console.log("My restaurant data updated:", docSnap.id);
+          setState({ 
+            myRestaurant: { id: docSnap.id, ...docSnap.data() } as Restaurant, 
+            isLoading: false, 
+            error: null 
+          });
+        } else {
+          // Handle case where the restaurant document is deleted
+          console.log("My restaurant document deleted.");
+          setRestaurantId(null); 
+          setState({ myRestaurant: null, isLoading: false, error: 'Restaurant data not found.' }); 
+        }
+      }, 
+      (err) => {
+        console.error("Error listening to my restaurant updates:", err);
+        const firestoreError = err as FirestoreError;
+        const errorMessage = firestoreError.message || "Error receiving real-time updates for your restaurant.";
+        // Keep existing data? Or clear? Decide based on UX.
+        setState(prev => ({ ...prev, isLoading: false, error: errorMessage }));
+        toast.error(errorMessage);
       }
-      setIsLoading(false); // Ensure loading is false after first snapshot
-    }, (error) => {
-      console.error("Error listening to restaurant updates:", error);
-      toast.error("Error receiving real-time updates for your restaurant.");
-      setIsLoading(false);
-    });
+    );
 
     // Cleanup listener on component unmount or when restaurantId changes
     return () => {
-      console.log("Cleaning up listener for restaurant:", restaurantId);
+      console.log("Cleaning up listener for my restaurant:", restaurantId);
       unsubscribe();
     };
-  }, [restaurantId]);
+  }, [restaurantId, user?.uid]); // Add user?.uid dependency
 
-  // Create or update restaurant
-  const saveRestaurant = async (restaurantData: Partial<Omit<Restaurant, 'id' | 'owner_id' | 'created_at' | 'updated_at'>>) => {
-    if (!user) {
-      toast.error('You must be logged in to perform this action');
-      return null;
+  // --- CRUD Operations --- 
+
+  // Save function handles both Create and Update
+  const saveMyRestaurant = async (restaurantData: Partial<Omit<Restaurant, 'id' | 'owner_id' | 'createdAt' | 'updatedAt'>>) => {
+    if (!user?.uid) {
+      toast.error('You must be logged in to save a restaurant.');
+      throw new Error('User not authenticated');
     }
-    
+
+    // Use the current restaurantId from state
+    const currentRestaurantId = restaurantId; 
+
     try {
-      const restaurantsRef = collection(db, 'restaurants');
-      
-      if (restaurantId) {
+      if (currentRestaurantId) {
         // Update existing restaurant
-        console.log("Updating restaurant:", restaurantId);
-        const restaurantDoc = doc(db, 'restaurants', restaurantId);
-        await updateDoc(restaurantDoc, {
+        console.log("Updating restaurant:", currentRestaurantId);
+        const restaurantDocRef = doc(db, 'restaurants', currentRestaurantId);
+        await updateDoc(restaurantDocRef, {
           ...restaurantData,
-          // Use serverTimestamp for updates
-          updated_at: serverTimestamp(), 
+          updatedAt: serverTimestamp(), // Use serverTimestamp
         });
         toast.success('Restaurant updated successfully');
-        // No need to manually set state, listener will catch the update
-        // Return the updated data structure immediately for UI feedback if needed
-        return { id: restaurantId, ...myRestaurant, ...restaurantData } as Restaurant;
+        // State update will be handled by the listener
+        // Optionally return true or the data for immediate feedback if needed
+        return true; 
       } else {
         // Create new restaurant
         console.log("Creating new restaurant for user:", user.uid);
         if (!restaurantData.name) {
-          toast.error('Restaurant name is required');
-          return null;
+          toast.error('Restaurant name is required.');
+          throw new Error('Restaurant name is required.');
         }
-        
+        const restaurantsCollectionRef = collection(db, 'restaurants');
         const newRestaurantData = {
           ...restaurantData,
           owner_id: user.uid,
-          // Use serverTimestamp for creation and update
-          created_at: serverTimestamp(),
-          updated_at: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         };
-        
-        const docRef = await addDoc(restaurantsRef, newRestaurantData);
+        const docRef = await addDoc(restaurantsCollectionRef, newRestaurantData);
         console.log("New restaurant created with ID:", docRef.id);
-        // Set the new restaurant ID to trigger the listener
-        // The listener will then set the myRestaurant state
-        // setRestaurantId(docRef.id); 
-        // We might not need to setRestaurantId here if fetchMyRestaurant runs again
-        // Or, we can manually update the state for immediate feedback
-        const createdRestaurant = {
-          id: docRef.id,
-          ...newRestaurantData,
-          // Timestamps will be null until resolved by server, handle this in UI or fetch again
-          created_at: new Date(), // Placeholder until listener updates
-          updated_at: new Date(), // Placeholder
-        } as Restaurant;
-        setMyRestaurant(createdRestaurant);
-        setRestaurantId(docRef.id);
-
+        // Setting the restaurantId will trigger the listener to fetch the new data
+        // setRestaurantId(docRef.id); // Let the fetch/listener handle state update
         toast.success('Restaurant created successfully');
-        return createdRestaurant;
+        return docRef.id; // Return new ID
       }
-    } catch (error) {
-      console.error('Error saving restaurant:', error);
-      toast.error('Failed to save restaurant');
-      return null;
+    } catch (err) {
+      console.error('Error saving restaurant:', err);
+      const firestoreError = err as FirestoreError;
+      const errorMessage = firestoreError.message || 'Failed to save restaurant.';
+      toast.error(errorMessage);
+      throw err; // Re-throw error
     }
   };
 
+  // Note: Delete operation might need its own function if required.
+
   return {
-    // Only return the owner's restaurant
-    myRestaurant,
-    isLoading,
-    fetchMyRestaurant, // Keep if needed externally, though useEffect handles it
-    saveRestaurant
+    ...state, // myRestaurant, isLoading, error
+    saveMyRestaurant,
   };
 };

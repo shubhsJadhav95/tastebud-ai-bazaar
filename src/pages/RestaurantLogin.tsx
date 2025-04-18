@@ -1,259 +1,108 @@
-
-import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { toast } from "sonner";
-import NavBar from "../components/NavBar";
-import Footer from "../components/Footer";
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { authService } from '../services/authService'; // Assuming reverted authService path
+import { toast } from 'sonner';
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 
 const RestaurantLogin: React.FC = () => {
-  // Login state
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  
-  // Signup state
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [restaurantName, setRestaurantName] = useState("");
-  const [isSigningUp, setIsSigningUp] = useState(false);
-  
-  const { login, signup, isAuthenticated, userType } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (isAuthenticated && userType === "restaurant") {
-      navigate("/restaurant/dashboard");
-    } else if (isAuthenticated && userType === "customer") {
-      navigate("/customer/home");
-    }
-  }, [isAuthenticated, userType, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password) {
-      toast.error("Please enter both email and password");
-      return;
-    }
-    
-    setIsLoggingIn(true);
-
+    setIsLoading(true);
     try {
-      const success = await login(email, password, "restaurant");
+      // Call the login function from authService, specifying 'restaurant' type
+      const success = await authService.login(email, password, 'restaurant');
 
       if (success) {
-        toast.success("Login successful!");
-        navigate("/restaurant/dashboard");
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("An unexpected error occurred");
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Form validation
-    if (!signupEmail || !signupPassword || !confirmPassword || !restaurantName) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-    
-    if (signupPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-    
-    if (signupPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-    
-    setIsSigningUp(true);
-
-    try {
-      const success = await signup(signupEmail, signupPassword, "restaurant", restaurantName);
-
-      if (success) {
-        toast.success("Restaurant account created successfully!");
-        // After signup, redirect to restaurant profile
-        navigate("/restaurant/profile");
+        toast.success('Login successful! Redirecting to dashboard...');
+        navigate('/restaurant/dashboard'); // Navigate to dashboard on successful login
       } else {
-        // Important: Reset loading state if signup wasn't successful
-        setIsSigningUp(false);
+        // Error toast is likely handled within authService.login
+        // toast.error('Login failed. Please check credentials or user type.');
       }
-    } catch (error) {
-      console.error("Signup error:", error);
-      toast.error("An unexpected error occurred");
-      setIsSigningUp(false);
+    } catch (error: any) {
+      // Catch any unexpected errors from the login function call itself
+      console.error("Login component error:", error);
+      toast.error(error.message || 'An unexpected error occurred during login.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <NavBar />
-      
-      <div className="flex-grow flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Restaurant Portal</CardTitle>
-            <CardDescription>
-              Manage your restaurant and receive orders
-            </CardDescription>
-          </CardHeader>
-          
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <form onSubmit={handleLogin}>
-                <CardContent className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="restaurant@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <input
-                        id="remember-me"
-                        name="remember-me"
-                        type="checkbox"
-                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                      />
-                      <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                        Remember me
-                      </label>
-                    </div>
-                    
-                    <Link to="#" className="text-sm font-medium text-primary hover:underline">
-                      Forgot password?
-                    </Link>
-                  </div>
-                </CardContent>
-                
-                <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={isLoggingIn}
-                  >
-                    {isLoggingIn ? "Signing in..." : "Sign in"}
-                  </Button>
-                </CardFooter>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup}>
-                <CardContent className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="restaurantName">Restaurant Name</Label>
-                    <Input
-                      id="restaurantName"
-                      type="text"
-                      placeholder="Your Restaurant"
-                      value={restaurantName}
-                      onChange={(e) => setRestaurantName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signupEmail">Email</Label>
-                    <Input
-                      id="signupEmail"
-                      type="email"
-                      placeholder="restaurant@email.com"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signupPassword">Password</Label>
-                    <Input
-                      id="signupPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                </CardContent>
-                
-                <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={isSigningUp}
-                  >
-                    {isSigningUp ? "Creating Account..." : "Create Account"}
-                  </Button>
-                </CardFooter>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </Card>
-      </div>
-      
-      <Footer />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 to-amber-200 p-4">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Restaurant Login</CardTitle>
+          <CardDescription>Access your restaurant dashboard</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="********"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-gray-500"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                 <>
+                   <LogIn className="mr-2 h-4 w-4 animate-spin" /> Logging in...
+                 </>
+               ) : (
+                 'Login'
+               )}
+            </Button>
+          </form>
+          {/* Optional: Add links for password reset or signup if applicable */}
+          {/* <div className="mt-4 text-center text-sm">
+            <Link to="/restaurant/forgot-password" className="underline">
+              Forgot password?
+            </Link>
+          </div> */}
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-export default RestaurantLogin;
+export default RestaurantLogin; 

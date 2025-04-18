@@ -1,76 +1,95 @@
-
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import NavBar from "../components/NavBar";
-import Footer from "../components/Footer";
-import MenuItem from "../components/MenuItem";
-import { restaurants, menuItems } from "../utils/mockData";
+import { useParams, useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/client";
+import { useMenuItems } from "@/hooks/useMenuItems";
+import { Restaurant, MenuItem as MenuItemType } from "@/types";
+import NavBar from "@/components/NavBar";
+import Footer from "@/components/Footer";
+import MenuItemComponent from "@/components/MenuItem";
 import { toast } from "sonner";
-import { Star, Clock, DollarSign, MapPin, Phone, Globe, Search } from "lucide-react";
+import { 
+  Star, Clock, DollarSign, MapPin, Phone, Globe, Search, 
+  ChevronLeft, Loader2, AlertCircle 
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const RestaurantDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [restaurant, setRestaurant] = useState<any>(null);
-  const [menu, setMenu] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // Fetch restaurant details and menu
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
+
+  const { 
+    menuItems, 
+    loading: menuItemsLoading, 
+    error: menuItemsError 
+  } = useMenuItems(id);
+
+  const [searchTerm, setSearchTerm] = useState("");
+
   useEffect(() => {
-    const fetchData = async () => {
+    if (!id) {
+      toast.error("Invalid restaurant ID.");
+      navigate("/");
+      return;
+    }
+
+    const fetchRestaurant = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setIsLoading(true);
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const restaurantData = restaurants.find(r => r.id === id);
-        if (!restaurantData) {
+        const restaurantDocRef = doc(db, "restaurants", id);
+        const docSnap = await getDoc(restaurantDocRef);
+
+        if (docSnap.exists()) {
+          setRestaurant({ id: docSnap.id, ...docSnap.data() } as Restaurant);
+        } else {
+          setError("Restaurant not found.");
           toast.error("Restaurant not found");
-          return;
         }
-        
-        setRestaurant(restaurantData);
-        setMenu(menuItems[id || ""] || []);
-      } catch (error) {
-        toast.error("Failed to load restaurant details");
+      } catch (err) {
+        console.error("Error fetching restaurant:", err);
+        const errorMessage = err instanceof Error ? err.message : "Failed to load restaurant details.";
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    
-    fetchData();
-  }, [id]);
 
-  // Filter menu items based on search term
-  const filteredMenu = menu.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchTerm.toLowerCase())
+    fetchRestaurant();
+  }, [id, navigate]);
+
+  const filteredMenu = menuItems.filter(item => 
+    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
         <NavBar />
-        <div className="flex-grow py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-56 bg-gray-300 rounded-lg mb-6"></div>
-            <div className="h-8 bg-gray-300 rounded w-1/3 mb-4"></div>
-            <div className="h-4 bg-gray-300 rounded w-2/3 mb-8"></div>
-            <div className="h-10 bg-gray-300 rounded mb-8"></div>
-            <div className="space-y-6">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex">
-                  <div className="h-24 w-24 bg-gray-300 rounded-l-lg"></div>
-                  <div className="flex-grow p-4 border-t border-r border-b rounded-r-lg">
-                    <div className="h-5 bg-gray-300 rounded w-1/3 mb-2"></div>
-                    <div className="h-4 bg-gray-300 rounded w-2/3 mb-4"></div>
-                    <div className="flex justify-between">
-                      <div className="h-4 bg-gray-300 rounded w-16"></div>
-                      <div className="h-8 w-8 bg-gray-300 rounded-full"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        <div className="flex-grow">
+          <div className="relative h-64 md:h-80 lg:h-96 bg-gray-200">
+            <Skeleton className="w-full h-full" />
+          </div>
+          <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="md:col-span-2 space-y-4">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-32 w-full" />
+              </div>
             </div>
           </div>
         </div>
@@ -79,14 +98,19 @@ const RestaurantDetail: React.FC = () => {
     );
   }
 
-  if (!restaurant) {
+  if (error || !restaurant) {
     return (
       <div className="min-h-screen flex flex-col">
         <NavBar />
         <div className="flex-grow flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">Restaurant not found</h2>
-            <p className="text-gray-600">The restaurant you're looking for doesn't exist or has been removed.</p>
+          <div className="text-center p-8 max-w-md">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">{error || "Restaurant not found"}</h2>
+            <p className="text-gray-600 mb-6">Please check the URL or go back to our homepage.</p>
+            <Button onClick={() => navigate("/")}>
+              <ChevronLeft className="mr-2" size={16} />
+              Back to Home
+            </Button>
           </div>
         </div>
         <Footer />
@@ -99,57 +123,79 @@ const RestaurantDetail: React.FC = () => {
       <NavBar />
       
       <div className="flex-grow">
-        {/* Hero Section */}
         <div className="relative h-64 md:h-80 lg:h-96">
           <img
-            src={restaurant.image}
+            src={imageError || !restaurant.image_url 
+              ? "https://placehold.co/1200x400/png?text=Restaurant+Image" 
+              : restaurant.image_url}
             alt={restaurant.name}
             className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
           <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
             <h1 className="text-3xl md:text-4xl font-bold mb-2">{restaurant.name}</h1>
-            <div className="flex flex-wrap items-center gap-4">
-              <span className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded text-sm">
-                {restaurant.cuisine}
-              </span>
-              <div className="flex items-center">
-                <Star size={16} className="text-yellow-400 mr-1" />
-                <span>{restaurant.rating}</span>
-              </div>
-              <div className="flex items-center">
-                <Clock size={16} className="mr-1" />
-                <span>{restaurant.deliveryTime}</span>
-              </div>
-              <div className="flex items-center">
-                <DollarSign size={16} className="mr-1" />
-                <span>{restaurant.priceRange}</span>
-              </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              {restaurant.cuisine && (
+                <span className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded">
+                  {restaurant.cuisine}
+                </span>
+              )}
+              {restaurant.rating && (
+                <div className="flex items-center">
+                  <Star size={16} className="text-yellow-400 mr-1" />
+                  <span>{restaurant.rating.toFixed(1)}</span>
+                </div>
+              )}
+              {restaurant.delivery_time && (
+                <div className="flex items-center">
+                  <Clock size={16} className="mr-1" />
+                  <span>{restaurant.delivery_time} min</span>
+                </div>
+              )}
+              {restaurant.price_range && (
+                <div className="flex items-center">
+                  <DollarSign size={16} className="mr-1" />
+                  <span>{'$'.repeat(restaurant.price_range)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
         
-        {/* Restaurant Info Section */}
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div className="md:col-span-2">
               <h2 className="text-xl font-bold mb-4">About</h2>
-              <p className="text-gray-700 mb-6">{restaurant.description}</p>
+              <p className="text-gray-700 mb-6">
+                {restaurant.description || "No description available."}
+              </p>
               
               <h2 className="text-xl font-bold mb-4">Location & Contact</h2>
               <div className="space-y-3 text-gray-700">
-                <div className="flex items-start">
-                  <MapPin size={18} className="mr-2 mt-1 text-food-primary" />
-                  <span>{restaurant.address}</span>
-                </div>
+                {restaurant.address && (
+                  <div className="flex items-start">
+                    <MapPin size={18} className="mr-2 mt-1 text-primary" />
+                    <span>{restaurant.address}</span>
+                  </div>
+                )}
+                {restaurant.phone && (
+                  <div className="flex items-center">
+                    <Phone size={18} className="mr-2 text-primary" />
+                    <a href={`tel:${restaurant.phone}`} className="hover:underline">
+                      {restaurant.phone}
+                    </a>
+                  </div>
+                )}
                 <div className="flex items-center">
-                  <Phone size={18} className="mr-2 text-food-primary" />
-                  <span>(123) 456-7890</span>
-                </div>
-                <div className="flex items-center">
-                  <Globe size={18} className="mr-2 text-food-primary" />
-                  <a href="#" className="text-food-primary hover:underline">
-                    www.{restaurant.name.toLowerCase().replace(/\s+/g, '')}.com
+                  <Globe size={18} className="mr-2 text-primary" />
+                  <a 
+                    href={restaurant.website || "#"} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    {restaurant.website || "Website not available"}
                   </a>
                 </div>
               </div>
@@ -158,53 +204,66 @@ const RestaurantDetail: React.FC = () => {
             <div className="md:col-span-1">
               <h2 className="text-xl font-bold mb-4">Opening Hours</h2>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="text-gray-700">Monday</div>
-                  <div>10:00 AM - 10:00 PM</div>
-                  <div className="text-gray-700">Tuesday</div>
-                  <div>10:00 AM - 10:00 PM</div>
-                  <div className="text-gray-700">Wednesday</div>
-                  <div>10:00 AM - 10:00 PM</div>
-                  <div className="text-gray-700">Thursday</div>
-                  <div>10:00 AM - 10:00 PM</div>
-                  <div className="text-gray-700">Friday</div>
-                  <div>10:00 AM - 11:00 PM</div>
-                  <div className="text-gray-700">Saturday</div>
-                  <div>10:00 AM - 11:00 PM</div>
-                  <div className="text-gray-700">Sunday</div>
-                  <div>11:00 AM - 9:00 PM</div>
-                </div>
+                {restaurant.opening_hours ? (
+                  Object.entries(restaurant.opening_hours).map(([day, hours]) => (
+                    <div key={day} className="flex justify-between py-1 border-b last:border-b-0">
+                      <span className="font-medium capitalize">{day}</span>
+                      <span>{hours || "Closed"}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day => (
+                      <React.Fragment key={day}>
+                        <div className="text-gray-700 capitalize">{day}</div>
+                        <div>9:00 AM - 10:00 PM</div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
           
-          {/* Menu Section */}
           <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h2 className="text-2xl font-bold">Menu</h2>
-              
-              <div className="relative">
+              <div className="relative w-full sm:w-64">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search size={16} className="text-gray-500" />
                 </div>
                 <input
                   type="text"
                   placeholder="Search menu items..."
-                  className="pl-9 py-2 pr-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-food-primary"
+                  className="pl-9 w-full py-2 pr-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Search menu items"
                 />
               </div>
             </div>
-            
-            {filteredMenu.length === 0 ? (
+
+            {menuItemsLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : menuItemsError ? (
+              <div className="text-center py-8 text-red-600">
+                <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                Error loading menu: {menuItemsError}
+              </div>
+            ) : filteredMenu.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">No menu items found matching your search.</p>
+                <p className="text-gray-500">
+                  {searchTerm 
+                    ? "No menu items found matching your search." 
+                    : "This restaurant hasn't added any menu items yet."}
+                </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredMenu.map(item => (
-                  <MenuItem key={item.id} item={item} />
+                  <MenuItemComponent key={item.id} item={item} />
                 ))}
               </div>
             )}

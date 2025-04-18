@@ -1,10 +1,8 @@
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getAnalytics, isSupported } from "firebase/analytics";
-import { getStorage } from "firebase/storage";
-// import { getAnalytics } from "firebase/analytics"; // Uncomment if you need Analytics
-// import { getStorage } from "firebase/storage"; // Uncomment if you need Storage
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
+// Optional: import { getAnalytics, Analytics } from "firebase/analytics";
 
 // Validate environment variables
 const requiredEnvVars = [
@@ -35,44 +33,40 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase only if it hasn't been initialized
-let app;
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+let storage: FirebaseStorage;
+// let analytics: Analytics | undefined; // Optional
+
 try {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  auth = getAuth(app);
+  db = getFirestore(app);
+  storage = getStorage(app);
+  
+  // Initialize Analytics only in browser environment
+  if (typeof window !== 'undefined') {
+    // Initialize Analytics if measurementId is provided and valid
+    // if (firebaseConfig.measurementId && firebaseConfig.measurementId.startsWith('G-')) {
+    //   try { analytics = getAnalytics(app); } catch (e) { console.warn("Analytics initialization failed:", e); }
+    // }
+  }
+  
+  console.log("Firebase initialized successfully.");
 } catch (error) {
   console.error('Error initializing Firebase:', error);
   throw new Error('Failed to initialize Firebase. Please check your configuration.');
 }
 
-// Initialize Firebase services with error handling
-let auth;
-let db;
-let analytics;
-let storage;
-
-try {
-  auth = getAuth(app);
-  db = getFirestore(app);
-  
-  // Initialize Analytics only in browser environment
-  if (typeof window !== 'undefined') {
-    isSupported().then(yes => yes && (analytics = getAnalytics(app)));
-  }
-  
-  // Initialize Storage
-  storage = getStorage(app);
-} catch (error) {
-  console.error('Error initializing Firebase services:', error);
-  throw new Error('Failed to initialize Firebase services.');
-}
-
 // Export initialized services
-export { auth, db, analytics, storage };
+export { app, auth, db, storage };
 
 // Type definitions for Firebase services
-export type FirebaseAuth = typeof auth;
-export type FirebaseFirestore = typeof db;
-export type FirebaseAnalytics = typeof analytics;
-export type FirebaseStorage = typeof storage;
+export type FirebaseAuth = Auth;
+export type FirebaseFirestore = Firestore;
+// export type FirebaseStorage = FirebaseStorage;
+// export type FirebaseAnalytics = Analytics; // Optional
 
 // Example of how to import these services in other files:
 // import { auth, db } from "@/integrations/firebase/client"; 
