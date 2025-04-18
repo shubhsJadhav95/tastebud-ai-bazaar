@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
@@ -158,7 +157,7 @@ const RestaurantMenu: React.FC = () => {
         ...currentItem,
         [parent]: {
           ...currentItem[parent],
-          [child]: value
+          [child]: parseFloat(value)
         }
       });
     } else {
