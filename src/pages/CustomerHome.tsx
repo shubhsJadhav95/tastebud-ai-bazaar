@@ -1,24 +1,44 @@
 
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useRestaurants, Restaurant } from "../hooks/useRestaurants";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import RestaurantCard from "../components/RestaurantCard";
 import AIRecommendation from "../components/AIRecommendation";
-import { restaurants, offers, cuisineFilters } from "../utils/mockData";
+import { offers, cuisineFilters } from "../utils/mockData";
 import { Search, Filter, MapPin } from "lucide-react";
+import { toast } from "sonner";
 
 const CustomerHome: React.FC = () => {
+  const { isAuthenticated, userType } = useAuth();
+  const navigate = useNavigate();
+  const { restaurants, isLoading } = useRestaurants();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCuisine, setSelectedCuisine] = useState("All");
-  const [filteredRestaurants, setFilteredRestaurants] = useState(restaurants);
+  const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
   const [userLocation, setUserLocation] = useState("123 MG Road, Bengaluru");
+
+  // Redirect if not authenticated or not a customer
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/customer/login");
+    } else if (userType !== "customer") {
+      navigate("/");
+      toast.error("Access denied. This page is for customers only.");
+    }
+  }, [isAuthenticated, userType, navigate]);
 
   // Filter restaurants based on search term and cuisine
   useEffect(() => {
+    if (!restaurants) return;
+    
     const results = restaurants.filter(restaurant => {
-      const matchesSearch = restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           restaurant.cuisine.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = 
+        restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (restaurant.cuisine?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
       
       const matchesCuisine = selectedCuisine === "All" || restaurant.cuisine === selectedCuisine;
       
@@ -26,7 +46,7 @@ const CustomerHome: React.FC = () => {
     });
     
     setFilteredRestaurants(results);
-  }, [searchTerm, selectedCuisine]);
+  }, [searchTerm, selectedCuisine, restaurants]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -123,16 +143,43 @@ const CustomerHome: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-bold mb-6">Restaurants Near You</h2>
             
-            {filteredRestaurants.length === 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <div key={item} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                    <div className="h-48 bg-gray-300"></div>
+                    <div className="p-4">
+                      <div className="h-6 bg-gray-300 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
+                      <div className="h-4 bg-gray-300 rounded w-full mb-2"></div>
+                      <div className="flex space-x-2 mt-4">
+                        <div className="h-8 bg-gray-300 rounded w-16"></div>
+                        <div className="h-8 bg-gray-300 rounded w-16"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredRestaurants.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500">No restaurants found matching your search criteria.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredRestaurants.map((restaurant, index) => (
+                {filteredRestaurants.map((restaurant) => (
                   <RestaurantCard 
                     key={restaurant.id} 
-                    restaurant={restaurant} 
+                    restaurant={{
+                      id: restaurant.id,
+                      name: restaurant.name,
+                      cuisine: restaurant.cuisine || "Various",
+                      rating: 4.5, // Default rating since we don't have it in the database yet
+                      deliveryTime: restaurant.delivery_time || "30-45 min",
+                      priceRange: restaurant.price_range || "$$",
+                      image: restaurant.image_url || "https://placehold.co/600x400/png?text=Restaurant",
+                      description: restaurant.description || "A lovely restaurant with delicious food.",
+                      address: restaurant.address || "Address not provided"
+                    }} 
                   />
                 ))}
               </div>
