@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { db } from '@/integrations/firebase/client';
+import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 export interface MenuItem {
   id: string;
@@ -12,59 +12,32 @@ export interface MenuItem {
   image_url: string | null;
   category: string | null;
   is_available: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at: Timestamp;
+  updated_at: Timestamp;
 }
 
 export const useMenuItems = (restaurantId?: string) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch menu items for a specific restaurant
-  const fetchMenuItems = async (id?: string) => {
-    const restaurantIdToUse = id || restaurantId;
-    
-    if (!restaurantIdToUse) {
-      setMenuItems([]);
-      setIsLoading(false);
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('restaurant_id', restaurantIdToUse)
-        .order('category', { ascending: true })
-        .order('name', { ascending: true });
-      
-      if (error) {
-        throw error;
-      }
-      
-      setMenuItems(data as MenuItem[]);
-    } catch (error) {
-      console.error('Error fetching menu items:', error);
-      toast.error('Failed to load menu items');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
   // Create a new menu item
-  const createMenuItem = async (item: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>) => {
+  const createMenuItem = async (itemData: Omit<MenuItem, 'id' | 'created_at' | 'updated_at' | 'restaurant_id'>) => {
+    if (!restaurantId) {
+      toast.error("Restaurant ID is required to add a menu item.");
+      return null;
+    }
     try {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .insert([item])
-        .select()
-        .single();
+      const menuItemsRef = collection(db, 'menu_items');
+      const newMenuItemData = {
+        ...itemData,
+        restaurant_id: restaurantId,
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      };
       
-      if (error) throw error;
-      
+      const docRef = await addDoc(menuItemsRef, newMenuItemData);
       toast.success('Menu item added successfully');
-      return data as MenuItem;
+      return docRef.id;
     } catch (error) {
       console.error('Error creating menu item:', error);
       toast.error('Failed to add menu item');
@@ -73,39 +46,27 @@ export const useMenuItems = (restaurantId?: string) => {
   };
   
   // Update a menu item
-  const updateMenuItem = async (id: string, updates: Partial<MenuItem>) => {
+  const updateMenuItem = async (itemId: string, updates: Partial<Omit<MenuItem, 'id' | 'created_at' | 'restaurant_id'>>) => {
     try {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
+      const menuItemDoc = doc(db, 'menu_items', itemId);
+      await updateDoc(menuItemDoc, {
+        ...updates,
+        updated_at: serverTimestamp(),
+      });
       toast.success('Menu item updated successfully');
-      return data as MenuItem;
+      return true;
     } catch (error) {
       console.error('Error updating menu item:', error);
       toast.error('Failed to update menu item');
-      return null;
+      return false;
     }
   };
   
   // Delete a menu item
-  const deleteMenuItem = async (id: string) => {
+  const deleteMenuItem = async (itemId: string) => {
     try {
-      const { error } = await supabase
-        .from('menu_items')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
+      const menuItemDoc = doc(db, 'menu_items', itemId);
+      await deleteDoc(menuItemDoc);
       toast.success('Menu item deleted successfully');
       return true;
     } catch (error) {
@@ -117,47 +78,48 @@ export const useMenuItems = (restaurantId?: string) => {
   
   // Set up real-time subscription when restaurantId changes
   useEffect(() => {
-    if (restaurantId) {
-      fetchMenuItems();
-      
-      // Set up real-time subscription
-      const channel = supabase
-        .channel('menu-items-changes')
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'menu_items',
-          filter: `restaurant_id=eq.${restaurantId}`
-        }, (payload) => {
-          console.log('Real-time menu update:', payload);
-          
-          // Handle different events
-          if (payload.eventType === 'INSERT') {
-            setMenuItems(prev => [...prev, payload.new as MenuItem]);
-          } else if (payload.eventType === 'UPDATE') {
-            setMenuItems(prev => 
-              prev.map(item => 
-                item.id === payload.new.id ? (payload.new as MenuItem) : item
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setMenuItems(prev => 
-              prev.filter(item => item.id !== payload.old.id)
-            );
-          }
-        })
-        .subscribe();
-      
-      return () => {
-        supabase.removeChannel(channel);
-      };
+    setMenuItems([]);
+    setIsLoading(true); 
+
+    if (!restaurantId) {
+      console.log("No restaurant ID provided, clearing menu items.");
+      setIsLoading(false);
+      return;
     }
+    
+    console.log("Setting up listener for menu items of restaurant:", restaurantId);
+    const menuItemsRef = collection(db, 'menu_items');
+    const q = query(
+      menuItemsRef,
+      where('restaurant_id', '==', restaurantId),
+      orderBy('category'),
+      orderBy('name')
+    );
+      
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log("Menu items snapshot received. Docs count:", snapshot.docs.length);
+      const menuItemsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as MenuItem[];
+      
+      setMenuItems(menuItemsData);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error listening to menu item updates:", error);
+      toast.error("Error receiving real-time updates for menu items.");
+      setIsLoading(false);
+    });
+      
+    return () => {
+      console.log("Cleaning up listener for menu items of restaurant:", restaurantId);
+      unsubscribe();
+    };
   }, [restaurantId]);
 
   return {
     menuItems,
     isLoading,
-    fetchMenuItems,
     createMenuItem,
     updateMenuItem,
     deleteMenuItem

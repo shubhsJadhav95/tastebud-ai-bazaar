@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
+import { useState, useEffect, useCallback } from 'react';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { db } from '@/integrations/firebase/client';
+import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc, getDocs, serverTimestamp, limit } from 'firebase/firestore';
 
 export interface Restaurant {
   id: string;
@@ -15,110 +16,147 @@ export interface Restaurant {
   price_range: string | null;
   delivery_time: string | null;
   phone: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at: any;
+  updated_at: any;
 }
 
 export const useRestaurants = () => {
-  const { user } = useAuth();
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const { user } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
   const [myRestaurant, setMyRestaurant] = useState<Restaurant | null>(null);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
   
-  // Fetch all restaurants
-  const fetchRestaurants = async () => {
+  // Fetch restaurant by owner ID using useCallback
+  const fetchMyRestaurant = useCallback(async (userId: string) => {
+    setIsLoading(true);
+    console.log("Fetching restaurant for user:", userId);
+    const restaurantsRef = collection(db, 'restaurants');
+    // Query for restaurant owned by the user
+    const q = query(restaurantsRef, where('owner_id', '==', userId), limit(1));
+
     try {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('*')
-        .order('name');
-      
-      if (error) {
-        throw error;
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const docSnap = querySnapshot.docs[0];
+        console.log("Restaurant found:", docSnap.id);
+        setRestaurantId(docSnap.id);
+        setMyRestaurant({ id: docSnap.id, ...docSnap.data() } as Restaurant);
+      } else {
+        console.log("No restaurant found for this user.");
+        setMyRestaurant(null);
+        setRestaurantId(null);
       }
-      
-      setRestaurants(data as Restaurant[]);
     } catch (error) {
-      console.error('Error fetching restaurants:', error);
-      toast.error('Failed to load restaurants');
+      console.error('Error fetching my restaurant:', error);
+      toast.error('Failed to load your restaurant information.');
+      setMyRestaurant(null);
+      setRestaurantId(null);
     } finally {
       setIsLoading(false);
     }
-  };
-  
-  // Fetch restaurant by owner (for restaurant owners)
-  const fetchMyRestaurant = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('owner_id', user.id)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-        throw error;
-      }
-      
-      setMyRestaurant(data as Restaurant);
-    } catch (error) {
-      console.error('Error fetching my restaurant:', error);
+  }, []);
+
+  // Effect to fetch restaurant when user logs in
+  useEffect(() => {
+    if (user?.uid) {
+      fetchMyRestaurant(user.uid);
+    } else {
+      // Clear restaurant data if user logs out
+      setMyRestaurant(null);
+      setRestaurantId(null);
+      setIsLoading(false);
     }
-  };
-  
+  }, [user?.uid, fetchMyRestaurant]);
+
+  // Effect for real-time updates on the fetched restaurant
+  useEffect(() => {
+    if (!restaurantId) return;
+
+    console.log("Setting up listener for restaurant:", restaurantId);
+    const restaurantDocRef = doc(db, 'restaurants', restaurantId);
+    
+    const unsubscribe = onSnapshot(restaurantDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        console.log("Restaurant data updated:", docSnap.id);
+        setMyRestaurant({ id: docSnap.id, ...docSnap.data() } as Restaurant);
+      } else {
+        // Handle case where the restaurant might be deleted
+        console.log("Restaurant document deleted.");
+        setMyRestaurant(null);
+        setRestaurantId(null); 
+      }
+      setIsLoading(false); // Ensure loading is false after first snapshot
+    }, (error) => {
+      console.error("Error listening to restaurant updates:", error);
+      toast.error("Error receiving real-time updates for your restaurant.");
+      setIsLoading(false);
+    });
+
+    // Cleanup listener on component unmount or when restaurantId changes
+    return () => {
+      console.log("Cleaning up listener for restaurant:", restaurantId);
+      unsubscribe();
+    };
+  }, [restaurantId]);
+
   // Create or update restaurant
-  const saveRestaurant = async (restaurantData: Partial<Restaurant>) => {
+  const saveRestaurant = async (restaurantData: Partial<Omit<Restaurant, 'id' | 'owner_id' | 'created_at' | 'updated_at'>>) => {
     if (!user) {
       toast.error('You must be logged in to perform this action');
       return null;
     }
     
     try {
-      // Check if restaurant exists
-      if (myRestaurant?.id) {
+      const restaurantsRef = collection(db, 'restaurants');
+      
+      if (restaurantId) {
         // Update existing restaurant
-        const { data, error } = await supabase
-          .from('restaurants')
-          .update({
-            ...restaurantData,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', myRestaurant.id)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        
-        setMyRestaurant(data as Restaurant);
+        console.log("Updating restaurant:", restaurantId);
+        const restaurantDoc = doc(db, 'restaurants', restaurantId);
+        await updateDoc(restaurantDoc, {
+          ...restaurantData,
+          // Use serverTimestamp for updates
+          updated_at: serverTimestamp(), 
+        });
         toast.success('Restaurant updated successfully');
-        return data;
+        // No need to manually set state, listener will catch the update
+        // Return the updated data structure immediately for UI feedback if needed
+        return { id: restaurantId, ...myRestaurant, ...restaurantData } as Restaurant;
       } else {
-        // Create new restaurant - Make sure name is required
+        // Create new restaurant
+        console.log("Creating new restaurant for user:", user.uid);
         if (!restaurantData.name) {
           toast.error('Restaurant name is required');
           return null;
         }
         
-        // Create new restaurant with properly typed data
-        const newRestaurant = {
+        const newRestaurantData = {
           ...restaurantData,
-          owner_id: user.id,
-          name: restaurantData.name
+          owner_id: user.uid,
+          // Use serverTimestamp for creation and update
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp(),
         };
         
-        const { data, error } = await supabase
-          .from('restaurants')
-          .insert([newRestaurant])
-          .select()
-          .single();
-        
-        if (error) throw error;
-        
-        setMyRestaurant(data as Restaurant);
+        const docRef = await addDoc(restaurantsRef, newRestaurantData);
+        console.log("New restaurant created with ID:", docRef.id);
+        // Set the new restaurant ID to trigger the listener
+        // The listener will then set the myRestaurant state
+        // setRestaurantId(docRef.id); 
+        // We might not need to setRestaurantId here if fetchMyRestaurant runs again
+        // Or, we can manually update the state for immediate feedback
+        const createdRestaurant = {
+          id: docRef.id,
+          ...newRestaurantData,
+          // Timestamps will be null until resolved by server, handle this in UI or fetch again
+          created_at: new Date(), // Placeholder until listener updates
+          updated_at: new Date(), // Placeholder
+        } as Restaurant;
+        setMyRestaurant(createdRestaurant);
+        setRestaurantId(docRef.id);
+
         toast.success('Restaurant created successfully');
-        return data;
+        return createdRestaurant;
       }
     } catch (error) {
       console.error('Error saving restaurant:', error);
@@ -126,63 +164,12 @@ export const useRestaurants = () => {
       return null;
     }
   };
-  
-  // Subscribe to real-time changes
-  useEffect(() => {
-    fetchRestaurants();
-    
-    if (user) {
-      fetchMyRestaurant();
-    }
-    
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('restaurants-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'restaurants' 
-      }, (payload) => {
-        console.log('Real-time update:', payload);
-        
-        // Handle different events
-        if (payload.eventType === 'INSERT') {
-          setRestaurants(prev => [...prev, payload.new as Restaurant]);
-        } else if (payload.eventType === 'UPDATE') {
-          setRestaurants(prev => 
-            prev.map(restaurant => 
-              restaurant.id === payload.new.id ? (payload.new as Restaurant) : restaurant
-            )
-          );
-          
-          // Update myRestaurant if it's the same
-          if (myRestaurant?.id === payload.new.id) {
-            setMyRestaurant(payload.new as Restaurant);
-          }
-        } else if (payload.eventType === 'DELETE') {
-          setRestaurants(prev => 
-            prev.filter(restaurant => restaurant.id !== payload.old.id)
-          );
-          
-          // Clear myRestaurant if it was deleted
-          if (myRestaurant?.id === payload.old.id) {
-            setMyRestaurant(null);
-          }
-        }
-      })
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id]);
 
   return {
-    restaurants,
+    // Only return the owner's restaurant
     myRestaurant,
     isLoading,
-    fetchRestaurants,
-    fetchMyRestaurant,
+    fetchMyRestaurant, // Keep if needed externally, though useEffect handles it
     saveRestaurant
   };
 };

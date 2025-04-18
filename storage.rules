@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isRestaurantOwner(restaurantId) {
+      return isAuthenticated() && 
+        firestore.get(/databases/(default)/documents/restaurants/$(restaurantId)).data.owner_id == request.auth.uid;
+    }
+
+    // Profile images
+    match /profile_images/{userId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) && 
+        request.resource.size < 5 * 1024 * 1024 && // 5MB max
+        request.resource.contentType.matches('image/.*');
+    }
+
+    // Restaurant images
+    match /restaurant_images/{restaurantId}/{fileName} {
+      allow read: if true;
+      allow write: if isRestaurantOwner(restaurantId) && 
+        request.resource.size < 10 * 1024 * 1024 && // 10MB max
+        request.resource.contentType.matches('image/.*');
+    }
+
+    // Menu item images
+    match /menu_item_images/{restaurantId}/{itemId}/{fileName} {
+      allow read: if true;
+      allow write: if isRestaurantOwner(restaurantId) && 
+        request.resource.size < 5 * 1024 * 1024 && // 5MB max
+        request.resource.contentType.matches('image/.*');
+    }
+  }
+} 

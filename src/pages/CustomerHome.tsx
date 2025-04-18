@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useRestaurants, Restaurant } from "../hooks/useRestaurants";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { useAllRestaurants } from "@/hooks/useAllRestaurants";
+import { Restaurant } from "@/types";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import RestaurantCard from "../components/RestaurantCard";
@@ -12,9 +12,9 @@ import { Search, Filter, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 const CustomerHome: React.FC = () => {
-  const { isAuthenticated, userType } = useAuth();
+  const { user, profile, loading: authLoading } = useAuthContext();
   const navigate = useNavigate();
-  const { restaurants, isLoading } = useRestaurants();
+  const { restaurants, isLoading: restaurantsLoading } = useAllRestaurants();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCuisine, setSelectedCuisine] = useState("All");
@@ -23,13 +23,15 @@ const CustomerHome: React.FC = () => {
 
   // Redirect if not authenticated or not a customer
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (authLoading) return;
+    
+    if (!user) {
       navigate("/customer/login");
-    } else if (userType !== "customer") {
-      navigate("/");
+    } else if (profile?.user_type !== "customer") {
+      navigate("/restaurant/dashboard");
       toast.error("Access denied. This page is for customers only.");
     }
-  }, [isAuthenticated, userType, navigate]);
+  }, [user, profile, authLoading, navigate]);
 
   // Filter restaurants based on search term and cuisine
   useEffect(() => {
@@ -143,7 +145,7 @@ const CustomerHome: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-bold mb-6">Restaurants Near You</h2>
             
-            {isLoading ? (
+            {restaurantsLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3, 4, 5, 6].map((item) => (
                   <div key={item} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">

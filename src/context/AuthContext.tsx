@@ -1,6 +1,6 @@
-
 import React, { createContext, useContext, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/integrations/firebase/client";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { AuthContextType, UserType } from "@/types/auth";
 import { useAuthState } from "@/hooks/useAuthState";
 import { authService } from "@/services/authService";
@@ -9,8 +9,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const {
-    session,
-    setSession,
     user,
     setUser,
     profile,
@@ -22,56 +20,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   } = useAuthState();
 
   useEffect(() => {
-    console.log("Setting up auth state listener");
-    
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log("Auth state changed:", event, newSession?.user?.id);
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        
-        if (newSession?.user) {
-          try {
-            const userProfile = await authService.fetchUserProfile(newSession.user.id);
-            console.log("Fetched user profile:", userProfile);
-            setProfile(userProfile);
-            setUserType(userProfile?.user_type ?? null);
-          } catch (error) {
-            console.error("Error fetching profile in auth state change:", error);
-          }
-        } else {
-          setProfile(null);
-          setUserType(null);
-        }
-      }
-    );
+    console.log("Setting up Firebase auth state listener");
+    setIsLoading(true);
 
-    // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-      console.log("Checking for existing session:", currentSession?.user?.id);
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("Firebase auth state changed. User:", firebaseUser?.uid);
+      setUser(firebaseUser);
+
+      if (firebaseUser) {
         try {
-          const userProfile = await authService.fetchUserProfile(currentSession.user.id);
-          console.log("Fetched existing user profile:", userProfile);
+          const userProfile = await authService.fetchUserProfile(firebaseUser.uid);
+          console.log("Fetched user profile:", userProfile);
           setProfile(userProfile);
           setUserType(userProfile?.user_type ?? null);
         } catch (error) {
-          console.error("Error fetching profile in session check:", error);
+          console.error("Error fetching profile in auth state change:", error);
+          setProfile(null);
+          setUserType(null);
         }
+      } else {
+        setProfile(null);
+        setUserType(null);
       }
-      
       setIsLoading(false);
     });
 
     return () => {
-      console.log("Cleaning up auth state listener");
-      subscription.unsubscribe();
+      console.log("Cleaning up Firebase auth state listener");
+      unsubscribe();
     };
-  }, []);
+  }, [setUser, setProfile, setUserType, setIsLoading]);
 
   const login = async (email: string, password: string, type: UserType) => {
     setIsLoading(true);

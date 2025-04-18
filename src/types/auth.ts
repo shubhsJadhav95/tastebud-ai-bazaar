@@ -1,5 +1,4 @@
-
-import { User } from "@supabase/supabase-js";
+import { User as FirebaseUser } from 'firebase/auth';
 
 export type UserType = "restaurant" | "customer" | null;
 
@@ -13,7 +12,7 @@ export interface UserProfile {
 }
 
 export interface AuthContextType {
-  user: User | null;
+  user: FirebaseUser | null;
   profile: UserProfile | null;
   login: (email: string, password: string, type: UserType) => Promise<boolean>;
   signup: (email: string, password: string, type: UserType, fullName?: string) => Promise<boolean>;
