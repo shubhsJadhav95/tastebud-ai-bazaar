@@ -47,6 +47,7 @@ const RestaurantLogin: React.FC = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
+      toast.error("An error occurred during login");
     } finally {
       setIsLoggingIn(false);
     }
@@ -60,18 +61,27 @@ const RestaurantLogin: React.FC = () => {
       return;
     }
     
+    if (!signupEmail || !signupPassword || !restaurantName) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
     setIsSigningUp(true);
 
     try {
       const success = await signup(signupEmail, signupPassword, "restaurant", restaurantName);
 
       if (success) {
-        // After signup, create a restaurant record
+        toast.success("Restaurant account created successfully!");
+        // After signup, redirect to restaurant profile
         navigate("/restaurant/profile");
+      } else {
+        // If signup returns false, make sure we reset the loading state
+        setIsSigningUp(false);
       }
     } catch (error) {
       console.error("Signup error:", error);
-    } finally {
+      toast.error("An error occurred during signup");
       setIsSigningUp(false);
     }
   };

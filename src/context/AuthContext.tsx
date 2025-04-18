@@ -39,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        console.log("Auth state changed:", event, newSession?.user?.id);
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
@@ -78,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
       
       if (error) {
+        console.error("Error fetching profile:", error);
         throw error;
       }
       
@@ -152,6 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (email: string, password: string, type: UserType, fullName?: string): Promise<boolean> => {
     try {
       setIsLoading(true);
+      console.log("Signing up user:", email, type, fullName);
       
       const { data, error } = await supabase.auth.signUp({ 
         email, 
@@ -164,28 +167,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
+        console.error("Signup auth error:", error);
         toast.error(error.message);
         return false;
       }
       
-      if (data.user) {
-        // Update the user_type in profiles table
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ user_type: type, full_name: fullName || null })
-          .eq('id', data.user.id);
-        
-        if (updateError) {
-          console.error("Error updating profile:", updateError);
-          toast.error("Error setting up user profile");
-          return false;
-        }
-        
-        toast.success("Account created successfully!");
-        return true;
+      if (!data.user) {
+        console.error("No user returned from signUp");
+        toast.error("Failed to create account");
+        return false;
       }
       
-      return false;
+      console.log("User signed up, updating profile:", data.user.id);
+      
+      // Update the user_type in profiles table
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ user_type: type, full_name: fullName || null })
+        .eq('id', data.user.id);
+      
+      if (updateError) {
+        console.error("Error updating profile:", updateError);
+        toast.error("Error setting up user profile");
+        return false;
+      }
+      
+      toast.success("Account created successfully!");
+      return true;
     } catch (error) {
       console.error("Signup error:", error);
       toast.error("An error occurred during signup");
