@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -15,6 +14,7 @@ export interface Restaurant {
   logo_url: string | null;
   price_range: string | null;
   delivery_time: string | null;
+  phone: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -11,6 +11,8 @@ interface UserProfile {
   email: string;
   full_name: string | null;
   user_type: UserType;
+  address: string | null;
+  phone: string | null;
 }
 
 interface AuthContextType {
