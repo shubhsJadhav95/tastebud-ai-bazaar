@@ -88,8 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: data.email,
           full_name: data.full_name,
           user_type: data.user_type as UserType,
-          address: data.address || null,
-          phone: data.phone || null
+          // Use optional chaining to safely access these properties
+          address: data.address ?? null,
+          phone: data.phone ?? null
         };
         
         setProfile(userProfile);
