@@ -22,6 +22,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   } = useAuthState();
 
   useEffect(() => {
+    console.log("Setting up auth state listener");
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
@@ -30,9 +32,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(newSession?.user ?? null);
         
         if (newSession?.user) {
-          const userProfile = await authService.fetchUserProfile(newSession.user.id);
-          setProfile(userProfile);
-          setUserType(userProfile?.user_type ?? null);
+          try {
+            const userProfile = await authService.fetchUserProfile(newSession.user.id);
+            console.log("Fetched user profile:", userProfile);
+            setProfile(userProfile);
+            setUserType(userProfile?.user_type ?? null);
+          } catch (error) {
+            console.error("Error fetching profile in auth state change:", error);
+          }
         } else {
           setProfile(null);
           setUserType(null);
@@ -42,35 +49,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      console.log("Checking for existing session:", currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
-        const userProfile = await authService.fetchUserProfile(currentSession.user.id);
-        setProfile(userProfile);
-        setUserType(userProfile?.user_type ?? null);
+        try {
+          const userProfile = await authService.fetchUserProfile(currentSession.user.id);
+          console.log("Fetched existing user profile:", userProfile);
+          setProfile(userProfile);
+          setUserType(userProfile?.user_type ?? null);
+        } catch (error) {
+          console.error("Error fetching profile in session check:", error);
+        }
       }
       
       setIsLoading(false);
     });
 
     return () => {
+      console.log("Cleaning up auth state listener");
       subscription.unsubscribe();
     };
   }, []);
 
   const login = async (email: string, password: string, type: UserType) => {
     setIsLoading(true);
-    const success = await authService.login(email, password, type);
-    setIsLoading(false);
-    return success;
+    try {
+      const success = await authService.login(email, password, type);
+      return success;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signup = async (email: string, password: string, type: UserType, fullName?: string) => {
     setIsLoading(true);
-    const success = await authService.signup(email, password, type, fullName);
-    setIsLoading(false);
-    return success;
+    try {
+      const success = await authService.signup(email, password, type, fullName);
+      return success;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await authService.logout();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const contextValue: AuthContextType = {
@@ -78,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     login,
     signup,
-    logout: authService.logout,
+    logout,
     isAuthenticated: !!user,
     isLoading,
     userType

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
@@ -31,11 +31,26 @@ const CustomerLogin: React.FC = () => {
   const [fullName, setFullName] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
   
-  const { login, signup } = useAuth();
+  const { login, signup, isAuthenticated, userType } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated && userType === "customer") {
+      navigate("/customer/home");
+    } else if (isAuthenticated && userType === "restaurant") {
+      navigate("/restaurant/dashboard");
+    }
+  }, [isAuthenticated, userType, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error("Please enter both email and password");
+      return;
+    }
+    
     setIsLoggingIn(true);
 
     try {
@@ -47,6 +62,7 @@ const CustomerLogin: React.FC = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
+      toast.error("An unexpected error occurred");
     } finally {
       setIsLoggingIn(false);
     }
@@ -55,8 +71,19 @@ const CustomerLogin: React.FC = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
+    if (!signupEmail || !signupPassword || !confirmPassword) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+    
     if (signupPassword !== confirmPassword) {
       toast.error("Passwords do not match");
+      return;
+    }
+    
+    if (signupPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
       return;
     }
     
@@ -66,12 +93,15 @@ const CustomerLogin: React.FC = () => {
       const success = await signup(signupEmail, signupPassword, "customer", fullName);
 
       if (success) {
-        toast.success("Account created! You can now log in");
+        toast.success("Account created! You are now logged in");
         navigate("/customer/home");
+      } else {
+        // Make sure to reset loading state on failure
+        setIsSigningUp(false);
       }
     } catch (error) {
       console.error("Signup error:", error);
-    } finally {
+      toast.error("An unexpected error occurred");
       setIsSigningUp(false);
     }
   };

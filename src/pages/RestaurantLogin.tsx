@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
@@ -31,11 +31,26 @@ const RestaurantLogin: React.FC = () => {
   const [restaurantName, setRestaurantName] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
   
-  const { login, signup } = useAuth();
+  const { login, signup, isAuthenticated, userType } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated && userType === "restaurant") {
+      navigate("/restaurant/dashboard");
+    } else if (isAuthenticated && userType === "customer") {
+      navigate("/customer/home");
+    }
+  }, [isAuthenticated, userType, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error("Please enter both email and password");
+      return;
+    }
+    
     setIsLoggingIn(true);
 
     try {
@@ -47,7 +62,7 @@ const RestaurantLogin: React.FC = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast.error("An error occurred during login");
+      toast.error("An unexpected error occurred");
     } finally {
       setIsLoggingIn(false);
     }
@@ -56,13 +71,19 @@ const RestaurantLogin: React.FC = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Form validation
+    if (!signupEmail || !signupPassword || !confirmPassword || !restaurantName) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
     if (signupPassword !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
     
-    if (!signupEmail || !signupPassword || !restaurantName) {
-      toast.error("Please fill in all required fields");
+    if (signupPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
       return;
     }
     
@@ -76,12 +97,12 @@ const RestaurantLogin: React.FC = () => {
         // After signup, redirect to restaurant profile
         navigate("/restaurant/profile");
       } else {
-        // If signup returns false, make sure we reset the loading state
+        // Important: Reset loading state if signup wasn't successful
         setIsSigningUp(false);
       }
     } catch (error) {
       console.error("Signup error:", error);
-      toast.error("An error occurred during signup");
+      toast.error("An unexpected error occurred");
       setIsSigningUp(false);
     }
   };

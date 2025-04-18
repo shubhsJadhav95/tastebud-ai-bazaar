@@ -37,12 +37,15 @@ export const authService = {
 
   async login(email: string, password: string, type: UserType): Promise<boolean> {
     try {
+      console.log(`Logging in user with email: ${email}, type: ${type}`);
+      
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
         password 
       });
       
       if (error) {
+        console.error("Login error:", error);
         toast.error(error.message);
         return false;
       }
@@ -56,20 +59,24 @@ export const authService = {
           .single();
         
         if (profileError) {
+          console.error("Error fetching profile:", profileError);
           toast.error("Error fetching profile");
           await this.logout();
           return false;
         }
         
         if (profileData.user_type !== type) {
+          console.error(`User type mismatch. Expected: ${type}, Got: ${profileData.user_type}`);
           toast.error(`This account is not registered as a ${type}`);
           await this.logout();
           return false;
         }
         
+        console.log("Login successful");
         return true;
       }
       
+      console.error("No user returned from signInWithPassword");
       return false;
     } catch (error) {
       console.error("Login error:", error);
@@ -88,6 +95,7 @@ export const authService = {
         options: {
           data: {
             full_name: fullName || "",
+            user_type: type // Include type in auth metadata
           }
         }
       });
@@ -109,7 +117,10 @@ export const authService = {
       // Update the user_type in profiles table
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ user_type: type, full_name: fullName || null })
+        .update({ 
+          user_type: type, 
+          full_name: fullName || null 
+        })
         .eq('id', data.user.id);
       
       if (updateError) {
@@ -130,8 +141,10 @@ export const authService = {
   async logout(): Promise<void> {
     try {
       await supabase.auth.signOut();
+      console.log("User logged out successfully");
     } catch (error) {
       console.error("Logout error:", error);
+      toast.error("Error logging out");
     }
   }
 };
