@@ -81,7 +81,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (data) {
         setProfile(data as UserProfile);
-        setUserType(data.user_type);
+        // Use the correct type for setUserType
+        const userTypeValue = data.user_type as UserType;
+        setUserType(userTypeValue);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -191,19 +193,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const contextValue: AuthContextType = {
+    user,
+    profile,
+    login,
+    signup,
+    logout,
+    isAuthenticated: !!user,
+    isLoading,
+    userType
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        login,
-        signup,
-        logout,
-        isAuthenticated: !!user,
-        isLoading,
-        userType
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

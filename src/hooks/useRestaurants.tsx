@@ -95,13 +95,22 @@ export const useRestaurants = () => {
         toast.success('Restaurant updated successfully');
         return data;
       } else {
-        // Create new restaurant
+        // Create new restaurant - Make sure name is required
+        if (!restaurantData.name) {
+          toast.error('Restaurant name is required');
+          return null;
+        }
+        
+        // Create new restaurant with properly typed data
+        const newRestaurant = {
+          ...restaurantData,
+          owner_id: user.id,
+          name: restaurantData.name
+        };
+        
         const { data, error } = await supabase
           .from('restaurants')
-          .insert([{
-            ...restaurantData,
-            owner_id: user.id,
-          }])
+          .insert([newRestaurant])
           .select()
           .single();
         

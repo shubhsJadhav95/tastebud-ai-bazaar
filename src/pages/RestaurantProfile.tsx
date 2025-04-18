@@ -1,77 +1,89 @@
 
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useRestaurants } from "../hooks/useRestaurants";
-import NavBar from "../components/NavBar";
-import Footer from "../components/Footer";
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { SaveIcon, ImageIcon, MapPinIcon, ClockIcon, DollarSignIcon, UtensilsIcon } from "lucide-react";
-
-const cuisineOptions = [
-  "Indian", "Chinese", "Italian", "Mexican", "Japanese", 
-  "Thai", "American", "Mediterranean", "Lebanese", "Korean"
-];
-
-const priceRangeOptions = ["$", "$$", "$$$", "$$$$"];
+import React, { useState, useEffect, ChangeEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { useRestaurants } from '@/hooks/useRestaurants';
+import { toast } from 'sonner';
+import NavBar from '@/components/NavBar';
+import Footer from '@/components/Footer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import ProfileInput from '@/components/ProfileInput';
+import {
+  Store,
+  MapPin,
+  Phone,
+  Clock,
+  Utensils,
+  DollarSign,
+  Image,
+  Camera,
+  Save
+} from 'lucide-react';
 
 const RestaurantProfile: React.FC = () => {
-  const { isAuthenticated, userType } = useAuth();
-  const { myRestaurant, saveRestaurant } = useRestaurants();
+  const { user, isAuthenticated, userType } = useAuth();
+  const { myRestaurant, fetchMyRestaurant, saveRestaurant } = useRestaurants();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    cuisine: "",
-    address: "",
-    price_range: "",
-    delivery_time: "",
-    image_url: "",
-    logo_url: ""
+    name: '',
+    description: '',
+    cuisine: '',
+    address: '',
+    phone: '',
+    delivery_time: '',
+    price_range: '',
+    image_url: '',
+    logo_url: '',
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Redirect if not authenticated or not a restaurant user
+  // Check if user is authenticated and is a restaurant
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate("/restaurant/login");
-    } else if (userType !== "restaurant") {
-      navigate("/");
-      toast.error("Access denied. This page is for restaurants only.");
+      navigate('/restaurant/login');
+      return;
     }
+    
+    if (userType !== 'restaurant') {
+      navigate('/customer/home');
+      toast.error('Only restaurant owners can access this page');
+      return;
+    }
+    
+    fetchMyRestaurant();
   }, [isAuthenticated, userType, navigate]);
   
-  // Populate form with existing restaurant data
+  // Update form data when restaurant data is fetched
   useEffect(() => {
     if (myRestaurant) {
       setFormData({
-        name: myRestaurant.name || "",
-        description: myRestaurant.description || "",
-        cuisine: myRestaurant.cuisine || "",
-        address: myRestaurant.address || "",
-        price_range: myRestaurant.price_range || "",
-        delivery_time: myRestaurant.delivery_time || "",
-        image_url: myRestaurant.image_url || "",
-        logo_url: myRestaurant.logo_url || ""
+        name: myRestaurant.name || '',
+        description: myRestaurant.description || '',
+        cuisine: myRestaurant.cuisine || '',
+        address: myRestaurant.address || '',
+        phone: myRestaurant.phone || '',
+        delivery_time: myRestaurant.delivery_time || '',
+        price_range: myRestaurant.price_range || '',
+        image_url: myRestaurant.image_url || '',
+        logo_url: myRestaurant.logo_url || '',
       });
     }
   }, [myRestaurant]);
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-  
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,168 +91,184 @@ const RestaurantProfile: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Validate required fields
-      if (!formData.name) {
-        toast.error("Restaurant name is required");
-        return;
-      }
+      await saveRestaurant({
+        name: formData.name,
+        description: formData.description,
+        cuisine: formData.cuisine,
+        address: formData.address,
+        phone: formData.phone,
+        delivery_time: formData.delivery_time,
+        price_range: formData.price_range,
+        image_url: formData.image_url,
+        logo_url: formData.logo_url,
+      });
       
-      const result = await saveRestaurant(formData);
-      
-      if (result) {
-        toast.success("Restaurant profile saved successfully");
-        
-        // If this was initial setup, redirect to menu page
-        if (!myRestaurant?.id) {
-          navigate("/restaurant/menu");
-        }
-      }
+      toast.success('Restaurant profile updated successfully');
     } catch (error) {
-      console.error("Error saving restaurant profile:", error);
-      toast.error("Failed to save restaurant profile");
+      console.error('Error saving restaurant profile:', error);
+      toast.error('Failed to update restaurant profile');
     } finally {
       setIsSubmitting(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
       
-      <div className="flex-grow py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">Restaurant Profile</CardTitle>
-            <CardDescription>
-              {myRestaurant?.id 
-                ? "Update your restaurant details" 
-                : "Complete your restaurant profile to start receiving orders"}
-            </CardDescription>
-          </CardHeader>
-          
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Restaurant Name*</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Enter restaurant name"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="cuisine">Cuisine</Label>
-                  <Select
-                    value={formData.cuisine}
-                    onValueChange={(value) => handleSelectChange('cuisine', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select cuisine" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cuisineOptions.map(cuisine => (
-                        <SelectItem key={cuisine} value={cuisine}>
-                          {cuisine}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description || ""}
-                    onChange={handleInputChange}
-                    placeholder="Describe your restaurant"
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address || ""}
-                    onChange={handleInputChange}
-                    placeholder="Enter restaurant address"
-                    icon={<MapPinIcon size={16} />}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="price_range">Price Range</Label>
-                  <Select
-                    value={formData.price_range || ""}
-                    onValueChange={(value) => handleSelectChange('price_range', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select price range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {priceRangeOptions.map(range => (
-                        <SelectItem key={range} value={range}>
-                          {range}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="delivery_time">Delivery Time</Label>
-                  <Input
-                    id="delivery_time"
-                    name="delivery_time"
-                    value={formData.delivery_time || ""}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 25-30 minutes"
-                    icon={<ClockIcon size={16} />}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="image_url">Cover Image URL</Label>
-                  <Input
-                    id="image_url"
-                    name="image_url"
-                    value={formData.image_url || ""}
-                    onChange={handleInputChange}
-                    placeholder="Enter image URL"
-                    icon={<ImageIcon size={16} />}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="logo_url">Logo URL</Label>
-                  <Input
-                    id="logo_url"
-                    name="logo_url"
-                    value={formData.logo_url || ""}
-                    onChange={handleInputChange}
-                    placeholder="Enter logo URL"
-                    icon={<ImageIcon size={16} />}
-                  />
-                </div>
-              </div>
-            </CardContent>
+      <div className="flex-grow py-8">
+        <div className="container max-w-4xl mx-auto px-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold">Restaurant Profile</CardTitle>
+            </CardHeader>
             
-            <CardFooter>
-              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
-                <SaveIcon className="mr-2 h-4 w-4" />
-                {isSubmitting ? "Saving..." : "Save Restaurant Profile"}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Basic Information</h3>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="name">Restaurant Name *</Label>
+                      <ProfileInput
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        placeholder="Restaurant Name"
+                        icon={<Store size={18} />}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="cuisine">Cuisine Type</Label>
+                      <ProfileInput
+                        id="cuisine"
+                        name="cuisine"
+                        value={formData.cuisine}
+                        onChange={handleInputChange}
+                        placeholder="Italian, Indian, etc."
+                        icon={<Utensils size={18} />}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      value={formData.description || ''}
+                      onChange={handleInputChange}
+                      placeholder="Describe your restaurant"
+                      className="h-24"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Contact & Location</h3>
+                  
+                  <div>
+                    <Label htmlFor="address">Address</Label>
+                    <ProfileInput
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      placeholder="Full Address"
+                      icon={<MapPin size={18} />}
+                    />
+                  </div>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <ProfileInput
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        placeholder="Contact Number"
+                        icon={<Phone size={18} />}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="delivery_time">Delivery Time</Label>
+                      <ProfileInput
+                        id="delivery_time"
+                        name="delivery_time"
+                        value={formData.delivery_time}
+                        onChange={handleInputChange}
+                        placeholder="25-35 min"
+                        icon={<Clock size={18} />}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Other Details</h3>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="price_range">Price Range</Label>
+                      <ProfileInput
+                        id="price_range"
+                        name="price_range"
+                        value={formData.price_range}
+                        onChange={handleInputChange}
+                        placeholder="$, $$, $$$"
+                        icon={<DollarSign size={18} />}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Images</h3>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="logo_url">Logo URL</Label>
+                      <ProfileInput
+                        id="logo_url"
+                        name="logo_url"
+                        value={formData.logo_url}
+                        onChange={handleInputChange}
+                        placeholder="URL for your restaurant logo"
+                        icon={<Image size={18} />}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="image_url">Cover Image URL</Label>
+                      <ProfileInput
+                        id="image_url"
+                        name="image_url"
+                        value={formData.image_url}
+                        onChange={handleInputChange}
+                        placeholder="URL for restaurant cover image"
+                        icon={<Camera size={18} />}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={isSubmitting || !formData.name}
+                >
+                  {isSubmitting ? 'Saving...' : 'Save Profile'}
+                  {!isSubmitting && <Save size={16} className="ml-2" />}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
       
       <Footer />

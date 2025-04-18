@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 const NavBar: React.FC = () => {
-  const { user, logout, userType } = useAuth();
+  const { user, profile, logout, userType } = useAuth();
   const { itemCount } = useCart();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -81,7 +81,7 @@ const NavBar: React.FC = () => {
                   </>
                 )}
                 <div className="flex items-center space-x-4">
-                  <span className="text-gray-700">{user.name}</span>
+                  <span className="text-gray-700">{profile?.full_name || user.email}</span>
                   <button 
                     onClick={handleLogout}
                     className="flex items-center text-gray-700 hover:text-food-primary transition-colors"
@@ -192,7 +192,7 @@ const NavBar: React.FC = () => {
                 <div className="border-t pt-2">
                   <div className="flex items-center text-gray-700 py-2">
                     <User size={18} className="mr-2" />
-                    <span>{user.name}</span>
+                    <span>{profile?.full_name || user.email}</span>
                   </div>
                   <button 
                     onClick={() => {
