@@ -88,7 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: data.email,
           full_name: data.full_name,
           user_type: data.user_type as UserType,
-          // Use optional chaining to safely access these properties
+          // Since we've added these columns to the database, we can now access them
+          // Use nullish coalescing to provide default values
           address: data.address ?? null,
           phone: data.phone ?? null
         };
