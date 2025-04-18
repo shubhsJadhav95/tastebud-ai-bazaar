@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Utensils, ListOrdered, Settings, Plus } from 'lucide-react';
+import { Utensils, ListOrdered, Settings, Plus, Package, Edit } from 'lucide-react';
 
 const RestaurantDashboard: React.FC = () => {
   const { user, profile, loading: authLoading, error: authError } = useAuthContext();
-  const { myRestaurant, loading: restaurantLoading, error: restaurantError } = useMyRestaurant();
+  const { myRestaurant, isLoading: restaurantIsLoading, error: restaurantError } = useMyRestaurant();
   const navigate = useNavigate();
 
   // Authentication and authorization checks
@@ -34,15 +34,26 @@ const RestaurantDashboard: React.FC = () => {
 
   // Error handling
   useEffect(() => {
-    if (authError) {
-      toast.error(authError.message || "Authentication error");
+    if (authError !== null) { 
+      let message = "Authentication error";
+      // If it's a string, use it directly
+      if (typeof authError === 'string' && authError.length > 0) {
+        message = authError;
+      } 
+      // Check if it has a message property (implicitly not a string if we reach here)
+      else if (typeof authError === 'object' && 'message' in authError && typeof (authError as any).message === 'string') { 
+        message = (authError as any).message;
+      }
+      // Otherwise, the default "Authentication error" is used
+      
+      toast.error(message);
     }
     if (restaurantError) {
       toast.error(restaurantError || "Failed to load restaurant data");
     }
   }, [authError, restaurantError]);
 
-  if (authLoading || restaurantLoading) {
+  if (authLoading || restaurantIsLoading) {
     return (
       <div className="min-h-screen flex flex-col">
         <NavBar />
@@ -104,11 +115,12 @@ const RestaurantDashboard: React.FC = () => {
                     <p className="text-gray-700 mb-1">Name: {myRestaurant.name}</p>
                     <p className="text-gray-700">Cuisine: {myRestaurant.cuisine || 'Not specified'}</p>
                     <Button 
-                      onClick={() => navigate('/restaurant/profile')} 
+                      onClick={() => myRestaurant?.id && navigate(`/dashboard/restaurants/${myRestaurant.id}`)} 
                       className="mt-4"
                       aria-label="Edit restaurant profile"
+                      disabled={!myRestaurant?.id}
                     >
-                      Edit Profile
+                      Edit Details & Menu
                     </Button>
                   </>
                 ) : (
@@ -130,19 +142,19 @@ const RestaurantDashboard: React.FC = () => {
               <CardHeader className="pb-2">
                 <div className="flex items-center space-x-2">
                   <ListOrdered className="text-primary" size={20} />
-                  <CardTitle>Menu Management</CardTitle>
+                  <CardTitle>Manage Details & Menu</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 mb-4">Add, edit, or remove menu items.</p>
+                <p className="text-gray-700 mb-4">Edit restaurant info and manage menu items.</p>
                 <Button 
-                  onClick={() => navigate('/restaurant/menu')} 
+                  onClick={() => myRestaurant?.id && navigate(`/dashboard/restaurants/${myRestaurant.id}`)} 
                   className="mt-auto"
-                  disabled={!myRestaurant}
-                  aria-label="Manage menu"
+                  disabled={!myRestaurant?.id}
+                  aria-label="Manage details and menu"
                 >
-                  <Plus className="mr-2" size={16} />
-                  Manage Menu
+                  <Edit className="mr-2" size={16} />
+                  Manage Restaurant
                 </Button>
               </CardContent>
             </Card>
@@ -150,14 +162,14 @@ const RestaurantDashboard: React.FC = () => {
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="pb-2">
                 <div className="flex items-center space-x-2">
-                  <Settings className="text-primary" size={20} />
+                  <Package className="text-primary" size={20} />
                   <CardTitle>Order Management</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-700 mb-4">View and manage incoming orders.</p>
                 <Button 
-                  onClick={() => navigate('/restaurant/orders')} 
+                  onClick={() => navigate('/dashboard/orders')}
                   className="mt-auto"
                   disabled={!myRestaurant}
                   aria-label="View orders"

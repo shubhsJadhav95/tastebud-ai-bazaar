@@ -21,6 +21,13 @@ import OrderTracking from "./pages/OrderTracking";
 import RestaurantOrders from "./pages/RestaurantOrders";
 import NotFound from "./pages/NotFound";
 
+// Import the new restaurant dashboard pages
+import RestaurantListPage from "./pages/dashboard/restaurants/RestaurantListPage";
+import RestaurantCreatePage from "./pages/dashboard/restaurants/RestaurantCreatePage";
+import RestaurantManagePage from "./pages/dashboard/restaurants/RestaurantManagePage";
+// Import the new orders page
+import RestaurantOrdersPage from "./pages/dashboard/orders/RestaurantOrdersPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -44,6 +51,15 @@ const App = () => (
               <Route path="/restaurant/orders" element={<RestaurantOrders />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/order-tracking" element={<OrderTracking />} />
+
+              {/* --- New Restaurant Dashboard Routes --- */}
+              <Route path="/dashboard/restaurants" element={<RestaurantListPage />} />
+              <Route path="/dashboard/restaurants/new" element={<RestaurantCreatePage />} />
+              <Route path="/dashboard/restaurants/:restaurantId" element={<RestaurantManagePage />} />
+              {/* Add Order Management Route */}
+              <Route path="/dashboard/orders" element={<RestaurantOrdersPage />} /> 
+              {/* --- End New Routes --- */}
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

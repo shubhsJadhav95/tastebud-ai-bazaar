@@ -15,7 +15,7 @@ export interface UserProfile {
 // Restaurant data stored in /restaurants/{restaurantId}
 export interface Restaurant {
   id: string; // Firestore document ID
-  owner_id: string;
+  owner_id: string; // Added for ownership/permissions
   name: string;
   name_lowercase: string; // Lowercase version for case-insensitive querying
   description?: string | null;
@@ -26,10 +26,13 @@ export interface Restaurant {
   price_range?: string | null;
   delivery_time?: string | null;
   phone?: string | null;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: Timestamp; // Added for tracking creation time
+  updatedAt?: Timestamp; // Optional or use serverTimestamp() on write
   // Optional fields potentially used in UI but not directly in base Firestore model
-  rating?: number; 
+  rating?: number;
+  contactNumber: string;
+  logoUrl: string;
+  coverImageUrl: string;
 }
 
 // Input type when creating a new restaurant (before ID, timestamps, lowercase are added)
@@ -50,6 +53,48 @@ export interface MenuItem {
 }
 
 // Add other shared types for your application (e.g., Order, CartItem) here
+
+// Define possible order statuses
+export type OrderStatus = 
+  | 'Pending' 
+  | 'Confirmed' 
+  | 'Preparing' 
+  | 'Ready for Pickup' 
+  | 'Out for Delivery' 
+  | 'Delivered' 
+  | 'Cancelled'
+  | 'Failed';
+
+// Interface for individual items within an order
+export interface OrderItem {
+  menuItemId: string; // Reference to the MenuItem
+  name: string; // Store name at time of order
+  quantity: number;
+  price: number; // Store price at time of order
+  // Add options/customizations if applicable
+}
+
+// Interface for Order data stored in /orders/{orderId}
+export interface Order {
+  id: string; // Firestore document ID
+  restaurant_id: string; // ID of the restaurant fulfilling the order
+  customer_id: string; // ID of the customer placing the order
+  items: OrderItem[]; // Array of items in the order
+  totalAmount: number; // Total cost of the order
+  status: OrderStatus; // Current status of the order
+  orderNumber?: string | number; // Optional user-friendly order number
+  deliveryAddress?: { // Optional: Only if delivery is supported
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    notes?: string;
+  };
+  customerName?: string; // Store for convenience
+  customerPhone?: string; // Store for convenience
+  createdAt: Timestamp;
+  updatedAt?: Timestamp; // Track last status update time
+}
 
 // Add other shared types here as needed, e.g.:
 // export interface UserProfile { ... }
