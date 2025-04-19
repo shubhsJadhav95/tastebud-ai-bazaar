@@ -82,10 +82,10 @@ const NavBar: React.FC = () => {
                     <Link to="/restaurant/dashboard" className="text-gray-700 hover:text-food-primary transition-colors">
                       Dashboard
                     </Link>
-                    <Link to="/restaurant/menu" className="text-gray-700 hover:text-food-primary transition-colors">
-                      Menu
+                    <Link to="/dashboard/restaurants" className="text-gray-700 hover:text-food-primary transition-colors">
+                      Manage Restaurant
                     </Link>
-                    <Link to="/restaurant/orders" className="text-gray-700 hover:text-food-primary transition-colors">
+                    <Link to="/dashboard/orders" className="text-gray-700 hover:text-food-primary transition-colors">
                       Orders
                     </Link>
                   </>
@@ -184,15 +184,15 @@ const NavBar: React.FC = () => {
                       <span>Dashboard</span>
                     </Link>
                     <Link 
-                      to="/restaurant/menu" 
+                      to="/dashboard/restaurants" 
                       className="flex items-center text-gray-700 hover:text-food-primary transition-colors py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <UtensilsCrossed size={18} className="mr-2" />
-                      <span>Menu</span>
+                      <span>Manage Restaurant</span>
                     </Link>
                     <Link 
-                      to="/restaurant/orders" 
+                      to="/dashboard/orders" 
                       className="flex items-center text-gray-700 hover:text-food-primary transition-colors py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >

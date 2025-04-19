@@ -1,5 +1,5 @@
 import { db } from '@/integrations/firebase/client'; // Corrected import path
-import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError, getDoc, writeBatch } from 'firebase/firestore';
 import { Order, OrderStatus } from '@/types'; // Import Order type as well
 
 export const orderService = {
@@ -49,27 +49,41 @@ export const orderService = {
   },
 
   /**
-   * Updates the status of a specific order.
+   * Updates the status of a specific order in both the main collection and the user's subcollection.
    * @param orderId - The ID of the order to update.
+   * @param customerId - The ID of the customer who placed the order.
    * @param status - The new status for the order.
    */
-  async updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
+  async updateOrderStatus(orderId: string, customerId: string, status: OrderStatus): Promise<void> {
     if (!orderId) {
       console.error('Order ID is required to update status.');
       throw new Error('Order ID is required.');
+    }
+    if (!customerId) {
+      console.error('Customer ID is required to update status in user subcollection.');
+      throw new Error('Customer ID is required.');
     }
     if (!status) {
       console.error('New status is required to update order.');
       throw new Error('New status is required.');
     }
 
+    const batch = writeBatch(db);
+
+    const mainOrderRef = doc(db, 'orders', orderId);
+    const userOrderRef = doc(db, 'users', customerId, 'orders', orderId);
+
+    const updateData = {
+      status: status,
+      updatedAt: Timestamp.now()
+    };
+
     try {
-      const orderRef = doc(db, 'orders', orderId);
-      await updateDoc(orderRef, {
-        status: status,
-        updatedAt: Timestamp.now() // Update timestamp on status change
-      });
-      console.log(`Order ${orderId} status updated to ${status}`);
+      batch.update(mainOrderRef, updateData);
+      batch.update(userOrderRef, updateData);
+
+      await batch.commit();
+      console.log(`Order ${orderId} status updated to ${status} in both locations`);
     } catch (error) {
       console.error(`Error updating order ${orderId} status:`, error);
       throw new Error('Failed to update order status.');
@@ -77,17 +91,16 @@ export const orderService = {
   },
 
   /**
-   * Listens for real-time updates on orders for a specific user.
+   * Listens for real-time updates on orders for a specific user from their subcollection.
    * @param userId The ID of the customer whose orders to fetch.
    * @param callback Function to call with the updated list of orders.
    * @returns An unsubscribe function to stop listening.
    */
   getOrdersByUser: (userId: string, callback: (orders: Order[]) => void): (() => void) => {
-    console.log(`Setting up listener for orders for user: ${userId}`);
-    const ordersRef = collection(db, 'orders');
+    console.log(`Setting up listener for orders SUBCOLLECTION for user: ${userId}`);
+    const userOrdersRef = collection(db, 'users', userId, 'orders');
     const q = query(
-      ordersRef, 
-      where('customer_id', '==', userId),
+      userOrdersRef,
       orderBy('createdAt', 'desc')
     );
 
@@ -100,8 +113,7 @@ export const orderService = {
       callback(orders);
     }, (error) => {
       console.error(`Error fetching orders for user ${userId}:`, error);
-      // Optionally, call callback with an empty array or handle error state
-      callback([]); 
+      callback([]);
     });
 
     return unsubscribe;

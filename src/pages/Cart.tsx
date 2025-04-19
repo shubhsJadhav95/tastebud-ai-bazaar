@@ -1,17 +1,27 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import OrderItem from "../components/OrderItem";
 import { useCart } from "../context/CartContext";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { offers } from "../utils/mockData";
 import { ShoppingBag, Truck, CreditCard, Tag, X, IndianRupee } from "lucide-react";
 import { useIsMobile } from "../hooks/use-mobile";
+import { db } from "@/integrations/firebase/client";
+import { collection, doc, writeBatch, serverTimestamp, FieldValue } from "firebase/firestore";
+import { Order, OrderItem as OrderItemType, OrderStatus } from "@/types";
+
+// Define a type for the data being written, allowing serverTimestamp for createdAt
+// Explicitly define the type again to ensure correctness
+type NewOrderData = Omit<Order, 'id' | 'createdAt'> & { 
+  createdAt: FieldValue 
+};
 
 const Cart: React.FC = () => {
   const { cart, removeItem, updateQuantity, clearCart } = useCart();
+  const { user, profile } = useAuthContext();
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -66,42 +76,79 @@ const Cart: React.FC = () => {
     }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
+    if (!user) {
+      toast.error("Please log in to place an order.");
+      navigate("/customer/login");
+      return;
+    }
     if (!deliveryAddress) {
       toast.error("Please enter a delivery address");
       return;
     }
-    
-    // Create order object with all details
-    const order = {
-      items: cart.items,
-      restaurantId: cart.restaurantId,
-      restaurantName: cart.restaurantName,
-      totalAmount,
-      deliveryAddress,
-      paymentMethod,
-      couponApplied: appliedCoupon?.code,
-      discount,
-      deliveryFee,
-      tax,
-      orderDate: new Date().toISOString()
+    if (cart.items.length === 0) {
+      toast.error("Your cart is empty.");
+      return;
+    }
+    if (!cart.restaurantId) {
+      toast.error("Restaurant information is missing from the cart.");
+      return;
+    }
+
+    // 1. Generate a new Order ID for Firestore
+    const newOrderRef = doc(collection(db, "orders"));
+    const newOrderId = newOrderRef.id;
+
+    // 2. Prepare the Order data matching the Firestore Order type
+    const orderData: NewOrderData = {
+      customer_id: user.uid,
+      restaurant_id: cart.restaurantId,
+      items: cart.items.map(item => ({
+        menuItemId: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      })) as OrderItemType[],
+      totalAmount: totalAmount,
+      status: 'Pending' as OrderStatus,
+      deliveryAddress: {
+        street: deliveryAddress,
+        city: "",
+        state: "",
+        zip: "",
+        notes: "",
+      },
+      customerName: user.displayName || profile?.full_name || user.email || 'N/A',
+      customerPhone: profile?.phone || 'N/A',
+      paymentMethod: paymentMethod,
+      createdAt: serverTimestamp(),
     };
-    
-    // Store order in localStorage (in a real app, this would be sent to a backend)
-    const orders = JSON.parse(localStorage.getItem("orders") || "[]");
-    orders.push({
-      ...order,
-      id: `order-${Date.now()}`,
-      status: "pending"
-    });
-    localStorage.setItem("orders", JSON.stringify(orders));
-    
-    // Clear cart
-    clearCart();
-    
-    // Navigate to the order tracking page
-    toast.success("Order placed successfully!");
-    navigate("/order-tracking");
+
+    // 3. Create a Write Batch
+    const batch = writeBatch(db);
+
+    // 4. Set the main order document
+    batch.set(newOrderRef, orderData);
+
+    // 5. Set the user's order subcollection document
+    const userOrderRef = doc(db, "users", user.uid, "orders", newOrderId);
+    batch.set(userOrderRef, orderData);
+
+    try {
+      // 6. Commit the batch
+      await batch.commit();
+
+      // 7. Clear cart (local state)
+      clearCart();
+
+      // 8. Navigate to the order tracking page (pass the new ID)
+      toast.success("Order placed successfully!");
+      navigate("/order-tracking");
+
+    } catch (error) {
+      console.error("Error placing order in Firestore:", error);
+      toast.error("Failed to place order. Please try again.");
+    }
   };
 
   if (cart.items.length === 0) {

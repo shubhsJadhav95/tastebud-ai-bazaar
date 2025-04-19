@@ -54,17 +54,27 @@ export const restaurantService = {
 
   // Get restaurants by owner
   async getRestaurantsByOwner(ownerId: string): Promise<Restaurant[]> {
+    if (!ownerId) {
+      console.error("Owner ID is required to fetch restaurants.");
+      return [];
+    }
     try {
       const restaurantsRef = collection(db, 'restaurants');
-      const q = query(restaurantsRef, where('owner_id', '==', ownerId), orderBy('name'));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Restaurant[];
+      const q = query(
+        restaurantsRef,
+        where('owner_id', '==', ownerId),
+        orderBy('name', 'asc') // Optional: order alphabetically by name
+      );
+      const querySnapshot = await getDocs(q);
+      const restaurants: Restaurant[] = [];
+      querySnapshot.forEach((doc) => {
+        restaurants.push({ id: doc.id, ...doc.data() } as Restaurant);
+      });
+      console.log(`Fetched ${restaurants.length} restaurants for owner ${ownerId}`);
+      return restaurants;
     } catch (error) {
-      console.error('Error fetching restaurants by owner:', error);
-      throw error;
+      console.error(`Error fetching restaurants for owner ${ownerId}:`, error);
+      throw new Error('Failed to fetch restaurants.'); // Re-throw for handling in hook/component
     }
   },
 

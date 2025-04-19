@@ -92,6 +92,7 @@ export interface Order {
   };
   customerName?: string; // Store for convenience
   customerPhone?: string; // Store for convenience
+  paymentMethod?: string; // Added payment method (optional?)
   createdAt: Timestamp;
   updatedAt?: Timestamp; // Track last status update time
 }

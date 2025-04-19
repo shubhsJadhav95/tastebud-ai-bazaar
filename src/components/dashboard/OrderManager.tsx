@@ -80,10 +80,14 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
     return () => unsubscribe();
   }, [restaurantId]);
 
-  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+  const handleStatusChange = async (orderId: string, customerId: string, newStatus: OrderStatus) => {
+    if (!customerId) {
+      toast.error("Customer ID is missing for this order. Cannot update status.");
+      return;
+    }
     setUpdatingStatus(prev => ({ ...prev, [orderId]: true }));
     try {
-      await orderService.updateOrderStatus(orderId, newStatus);
+      await orderService.updateOrderStatus(orderId, customerId, newStatus);
       toast.success(`Order #${orderId.substring(0, 6)} status updated to ${newStatus}.`);
       // Real-time listener will update the local state
     } catch (err: any) {
@@ -168,7 +172,7 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
                 <TableCell>
                   <Select 
                     value={order.status}
-                    onValueChange={(newStatus) => handleStatusChange(order.id, newStatus as OrderStatus)}
+                    onValueChange={(newStatus) => handleStatusChange(order.id, order.customer_id, newStatus as OrderStatus)}
                     disabled={updatingStatus[order.id]}
                   >
                     <SelectTrigger className={`w-full h-8 text-xs ${updatingStatus[order.id] ? 'opacity-50' : ''}`}> 
