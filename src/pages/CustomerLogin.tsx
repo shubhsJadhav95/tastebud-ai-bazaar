@@ -40,25 +40,33 @@ const CustomerLogin: React.FC = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    console.log('Auth state changed:', { 
-      user: user?.uid, 
-      profileType: profile?.user_type,
-      isLoading: authLoading 
+    // --- DETAILED REDIRECT LOGGING --- 
+    console.log('REDIRECT EFFECT Triggered. State:', { 
+      authLoading,
+      userId: user?.uid, 
+      profileExists: !!profile,
+      profileUserType: profile?.user_type 
     });
+    // --- END DETAILED LOGGING --- 
     
     if (authLoading) {
-      console.log('Still loading auth state...');
+      console.log('REDIRECT EFFECT: Still loading auth, returning.');
       return;
     }
     
     if (user && profile?.user_type === "customer") {
-      console.log('Redirecting to customer home...');
+      console.log('REDIRECT EFFECT: Condition MET! Navigating to /customer/home...'); // Added log
       navigate("/customer/home");
     } else if (user && profile?.user_type === "restaurant") {
-      console.log('Redirecting to restaurant dashboard...');
+      console.log('REDIRECT EFFECT: Condition MET! Navigating to /restaurant/dashboard...'); // Added log
       navigate("/restaurant/dashboard");
     } else if (user && !profile) {
-      console.log('User is authenticated but no profile found');
+      console.log('REDIRECT EFFECT: User exists, but profile is null/undefined.');
+    } else if (!user) {
+      console.log('REDIRECT EFFECT: User is null/undefined.');
+    } else {
+      // Log if conditions aren't met for some other reason
+      console.log('REDIRECT EFFECT: Conditions NOT MET. User:', user, 'Profile:', profile);
     }
   }, [user, profile, authLoading, navigate]);
 

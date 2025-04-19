@@ -1,5 +1,5 @@
 import { db } from '@/integrations/firebase/client'; // Corrected import path
-import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError, getDoc } from 'firebase/firestore';
 import { Order, OrderStatus } from '@/types'; // Import Order type as well
 
 export const orderService = {
@@ -74,7 +74,58 @@ export const orderService = {
       console.error(`Error updating order ${orderId} status:`, error);
       throw new Error('Failed to update order status.');
     }
-  }
+  },
 
-  // Add other order-related functions here if needed (e.g., getOrderById)
+  /**
+   * Listens for real-time updates on orders for a specific user.
+   * @param userId The ID of the customer whose orders to fetch.
+   * @param callback Function to call with the updated list of orders.
+   * @returns An unsubscribe function to stop listening.
+   */
+  getOrdersByUser: (userId: string, callback: (orders: Order[]) => void): (() => void) => {
+    console.log(`Setting up listener for orders for user: ${userId}`);
+    const ordersRef = collection(db, 'orders');
+    const q = query(
+      ordersRef, 
+      where('customer_id', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const orders: Order[] = [];
+      querySnapshot.forEach((doc) => {
+        orders.push({ id: doc.id, ...doc.data() } as Order);
+      });
+      console.log(`Received ${orders.length} orders for user ${userId}`);
+      callback(orders);
+    }, (error) => {
+      console.error(`Error fetching orders for user ${userId}:`, error);
+      // Optionally, call callback with an empty array or handle error state
+      callback([]); 
+    });
+
+    return unsubscribe;
+  },
+
+  /**
+   * Fetches the name of a single restaurant.
+   * @param restaurantId The ID of the restaurant.
+   * @returns The restaurant name or null if not found/error.
+   */
+  getRestaurantName: async (restaurantId: string): Promise<string | null> => {
+    try {
+      const restaurantDocRef = doc(db, 'restaurants', restaurantId); // Assuming 'restaurants' collection
+      const docSnap = await getDoc(restaurantDocRef);
+      if (docSnap.exists()) {
+        // Assuming the restaurant document has a 'name' field
+        return docSnap.data()?.name || null; 
+      } else {
+        console.warn(`Restaurant document not found for ID: ${restaurantId}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`Error fetching restaurant name for ID ${restaurantId}:`, error);
+      return null;
+    }
+  }
 }; 

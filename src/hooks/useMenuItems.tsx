@@ -23,21 +23,20 @@ export const useMenuItems = (restaurantId?: string) => {
 
   // Real-time listener for menu items of a specific restaurant
   useEffect(() => {
-    // If restaurantId is missing or invalid, don't query
     if (!restaurantId) {
-      setState({ menuItems: [], loading: false, error: null }); // Clear data, stop loading
+      setState({ menuItems: [], loading: false, error: null });
       console.log("No restaurant ID provided for useMenuItems.");
       return;
     }
 
     setState(prev => ({ ...prev, loading: true, error: null }));
-    console.log(`Setting up listener for menu items of restaurant: ${restaurantId}`);
+    console.log(`Setting up listener for menu items subcollection of restaurant: ${restaurantId}`);
 
-    const menuItemsCollectionRef = collection(db, 'menu_items');
+    const menuItemsSubcollectionRef = collection(db, 'restaurants', restaurantId, 'menu');
+    
     const q = query(
-      menuItemsCollectionRef,
-      where('restaurant_id', '==', restaurantId),
-      orderBy('category', 'asc'), // Example ordering
+      menuItemsSubcollectionRef,
+      orderBy('category', 'asc'), 
       orderBy('name', 'asc')
     );
 
@@ -47,7 +46,7 @@ export const useMenuItems = (restaurantId?: string) => {
         const menuItemsData = querySnapshot.docs.map(docSnap => ({
           id: docSnap.id,
           ...docSnap.data(),
-        })) as MenuItem[]; // Use shared type
+        })) as MenuItem[];
         setState({ menuItems: menuItemsData, loading: false, error: null });
       },
       (err) => {
@@ -59,12 +58,11 @@ export const useMenuItems = (restaurantId?: string) => {
       }
     );
 
-    // Cleanup listener on unmount or when restaurantId changes
     return () => {
-      console.log(`Cleaning up listener for menu items of restaurant: ${restaurantId}`);
+      console.log(`Cleaning up listener for menu items subcollection of restaurant: ${restaurantId}`);
       unsubscribe();
     };
-  }, [restaurantId]); // Dependency array: rerun effect if restaurantId changes
+  }, [restaurantId]);
 
   // --- CRUD Operations --- 
 
@@ -74,16 +72,14 @@ export const useMenuItems = (restaurantId?: string) => {
       return null;
     }
     try {
-      const menuItemsCollectionRef = collection(db, 'menu_items');
-      const docRef = await addDoc(menuItemsCollectionRef, {
+      const menuItemsSubcollectionRef = collection(db, 'restaurants', restaurantId, 'menu');
+      const docRef = await addDoc(menuItemsSubcollectionRef, {
         ...itemData,
-        restaurant_id: restaurantId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
       console.log("Menu item added with ID:", docRef.id);
       toast.success('Menu item added successfully');
-      // State update handled by the listener
       return docRef.id;
     } catch (err) {
       console.error("Error adding menu item:", err);
@@ -94,15 +90,18 @@ export const useMenuItems = (restaurantId?: string) => {
   };
 
   const updateMenuItem = async (itemId: string, updates: Partial<Omit<MenuItem, 'id' | 'createdAt' | 'restaurant_id'>>): Promise<boolean> => {
+    if (!restaurantId) {
+      toast.error("Restaurant context missing for update.");
+      return false;
+    }
     try {
-      const menuItemDocRef = doc(db, 'menu_items', itemId);
+      const menuItemDocRef = doc(db, 'restaurants', restaurantId, 'menu', itemId);
       await updateDoc(menuItemDocRef, {
         ...updates,
         updatedAt: serverTimestamp(),
       });
       console.log("Menu item updated:", itemId);
       toast.success('Menu item updated successfully');
-      // State update handled by the listener
       return true;
     } catch (err) {
       console.error("Error updating menu item:", err);
@@ -113,12 +112,15 @@ export const useMenuItems = (restaurantId?: string) => {
   };
 
   const deleteMenuItem = async (itemId: string): Promise<boolean> => {
+    if (!restaurantId) {
+      toast.error("Restaurant context missing for delete.");
+      return false;
+    }
     try {
-      const menuItemDocRef = doc(db, 'menu_items', itemId);
+      const menuItemDocRef = doc(db, 'restaurants', restaurantId, 'menu', itemId);
       await deleteDoc(menuItemDocRef);
       console.log("Menu item deleted:", itemId);
       toast.success('Menu item deleted successfully');
-      // State update handled by the listener
       return true;
     } catch (err) {
       console.error("Error deleting menu item:", err);
@@ -129,7 +131,7 @@ export const useMenuItems = (restaurantId?: string) => {
   };
 
   return {
-    ...state, // menuItems, loading, error
+    ...state,
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,

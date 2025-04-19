@@ -11,9 +11,12 @@ import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/integrations/firebase/client'; // Ensure this path is correct
 import { UserProfile } from '@/types';
-import { UserType } from '@/types/auth';
+import { UserType } from '@/types/auth'; // This might be the same as UserTypeValue, check definition
 import { toast } from 'sonner';
 import { authService } from '@/services/authService'; // Correctly import the exported object
+
+// Define the user type literal locally as it's not exported from authService
+type UserTypeValue = 'customer' | 'restaurant';
 
 // Define the shape of the context value
 interface AuthContextProps {
@@ -71,18 +74,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         profileListenerUnsubscribe = onSnapshot(userDocRef,
           (docSnap) => {
             if (docSnap.exists()) {
-              // Use authUser.uid for the 'uid' field to match UserProfile interface
-              const profileData = {
+              const rawData = docSnap.data(); // Get raw data first
+
+              // --- Extract and validate user_type like in authService ---
+              let finalUserType: UserTypeValue | undefined;
+              if (typeof rawData.user_type === 'string') {
+                finalUserType = rawData.user_type as UserTypeValue;
+              } else if (typeof rawData.user_type === 'object' && rawData.user_type !== null && typeof rawData.user_type.user_type === 'string') {
+                console.warn(`AuthContext/onSnapshot: Fixing nested user_type for UID: ${authUser.uid}`);
+                finalUserType = rawData.user_type.user_type as UserTypeValue;
+              } else {
+                console.error(`AuthContext/onSnapshot: Invalid or missing user_type for UID: ${authUser.uid}`, rawData.user_type);
+                setError('Invalid user profile type.');
+                setProfile(null);
+                setLoading(false); // Stop loading on error
+                return; // Don't proceed
+              }
+
+              if (!finalUserType || (finalUserType !== 'customer' && finalUserType !== 'restaurant')) {
+                 console.error(`AuthContext/onSnapshot: Validation FAILED for extracted user_type: "${finalUserType}" for UID: ${authUser.uid}`);
+                 setError('Invalid user profile type encountered.');
+                 setProfile(null);
+                 setLoading(false); // Stop loading on error
+                 return; // Don't proceed
+              }
+              // --- End extraction and validation ---
+
+
+              // --- Construct profileData using the validated finalUserType ---
+              const profileData: UserProfile = {
                 uid: authUser.uid, // Use uid from authUser
-                ...docSnap.data(), // Spread the rest of the data from Firestore
-              } as UserProfile;
-              // Add type assertion safety check (optional but recommended)
-              if (typeof profileData.email !== 'string' || typeof profileData.user_type === 'undefined') {
-                  console.error("Firestore profile data is missing required fields (email, user_type)", profileData);
-                  setError('Incomplete user profile data.');
+                email: rawData.email ?? '', // Use nullish coalescing
+                full_name: rawData.full_name ?? null,
+                address: rawData.address ?? null,
+                phone: rawData.phone ?? null,
+                // --- Use the CORRECTED type ---
+                user_type: finalUserType,
+                // Add other fields from UserProfile if necessary, using nullish coalescing
+                // e.g., createdAt: rawData.createdAt ?? null, 
+              };
+              // --- End construction ---
+
+
+              // Simplified check now that types are handled above
+              if (typeof profileData.email !== 'string') {
+                  console.error("AuthContext/onSnapshot: Firestore profile data is missing email field", profileData);
+                  setError('Incomplete user profile data (missing email).');
                   setProfile(null);
               } else {
-                 setProfile(profileData);
+                 setProfile(profileData); // Set the corrected profile
                  setError(null); // Clear error on successful profile load
               }
             } else {

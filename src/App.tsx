@@ -19,6 +19,7 @@ import CustomerProfile from "./pages/CustomerProfile";
 import Cart from "./pages/Cart";
 import OrderTracking from "./pages/OrderTracking";
 import RestaurantOrders from "./pages/RestaurantOrders";
+import CustomerOrdersPage from "./pages/customer/Orders";
 import NotFound from "./pages/NotFound";
 
 // Import the new restaurant dashboard pages
@@ -32,18 +33,19 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <CartProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/customer/login" element={<CustomerLogin />} />
               <Route path="/restaurant/login" element={<RestaurantLogin />} />
               <Route path="/customer/home" element={<CustomerHome />} />
               <Route path="/customer/profile" element={<CustomerProfile />} />
+              <Route path="/customer/orders" element={<CustomerOrdersPage />} />
               <Route path="/customer/restaurant/:id" element={<RestaurantDetail />} />
               <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
               <Route path="/restaurant/menu" element={<RestaurantMenu />} />
@@ -62,10 +64,10 @@ const App = () => (
 
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </CartProvider>
-    </AuthProvider>
+          </TooltipProvider>
+        </CartProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
