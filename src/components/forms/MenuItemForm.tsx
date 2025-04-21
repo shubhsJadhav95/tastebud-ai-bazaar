@@ -1,53 +1,49 @@
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { MenuItem } from '@/types'; // Adjust path if needed
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch";
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react'; // Import Loader2 icon
 
-// Define the fields needed for the form (excluding generated ones like id, restaurant_id)
-type MenuItemFormData = Omit<MenuItem, 'id' | 'restaurant_id' | 'createdAt' | 'updatedAt'>;
+// Explicitly define the form data shape
+type MenuItemFormData = {
+  name?: string;
+  description?: string | null;
+  price?: number | string; // Allow string for input
+  category?: string | null;
+  image_url?: string | null;
+  is_available?: boolean;
+};
 
 interface MenuItemFormProps {
   menuItem?: MenuItem | null; // For pre-filling in edit mode
-  onSubmit: (data: MenuItemFormData) => Promise<void>; // Function to call on save
+  onSubmit: (formData: MenuItemFormData) => Promise<void>; // Async submit handler
   onCancel: () => void; // Function to call when cancelling
   isSubmitting: boolean; // Indicate if submission is in progress
 }
 
 const MenuItemForm: React.FC<MenuItemFormProps> = ({ menuItem, onSubmit, onCancel, isSubmitting }) => {
-  const [formData, setFormData] = useState<MenuItemFormData>({
-    name: '',
-    description: '',
-    price: 0,
-    category: '',
-    image_url: '',
-    is_available: true,
-  });
-
+  const [formData, setFormData] = useState<MenuItemFormData>({});
   const isEditMode = !!menuItem;
 
   useEffect(() => {
     if (isEditMode && menuItem) {
-      // Pre-fill form, ensuring defaults for optional fields
-      const { id, restaurant_id, createdAt, updatedAt, ...editableData } = menuItem;
       setFormData({
-        name: editableData.name || '',
-        description: editableData.description || '',
-        price: editableData.price || 0,
-        category: editableData.category || '',
-        image_url: editableData.image_url || '',
-        is_available: editableData.is_available !== undefined ? editableData.is_available : true,
+        name: menuItem.name,
+        description: menuItem.description,
+        price: String(menuItem.price),
+        category: menuItem.category,
+        image_url: menuItem.image_url,
+        is_available: menuItem.is_available ?? true,
       });
     } else {
-      // Reset form for create mode
       setFormData({
         name: '',
         description: '',
-        price: 0,
+        price: '',
         category: '',
         image_url: '',
         is_available: true,
@@ -55,43 +51,48 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ menuItem, onSubmit, onCance
     }
   }, [menuItem, isEditMode]);
 
-  const handleInputChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'price' ? parseFloat(value) || 0 : value,
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handlePriceChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    // Allow empty string, numbers, and decimals
+    if (value === '' || /^[0-9]*\.?\d*$/.test(value)) {
+      setFormData(prev => ({ ...prev, price: value }));
+    }
   };
 
-  const handleCheckboxChange = (checked: boolean | 'indeterminate') => {
-    setFormData((prev) => ({ ...prev, is_available: !!checked }));
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData(prev => ({ ...prev, is_available: checked }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error("Menu item name is required.");
-      return;
-    }
-    if (formData.price <= 0) {
-      toast.error("Price must be a positive number.");
-      return;
+    const priceAsNumber = parseFloat(String(formData.price));
+    if (isNaN(priceAsNumber) || priceAsNumber < 0) {
+        toast.error("Please enter a valid positive price.");
+        return;
     }
 
-    await onSubmit(formData);
-    // The parent component (MenuManager) will handle closing the modal/form
+    // Prepare final data for submission, using URL from form
+    const finalFormData: MenuItemFormData = {
+      ...formData,
+      price: priceAsNumber,
+    };
+
+    await onSubmit(finalFormData);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="name">Item Name *</Label>
+        <Label htmlFor="name">Name *</Label>
         <Input
           id="name"
           name="name"
-          value={formData.name}
+          value={formData.name || ''}
           onChange={handleInputChange}
           placeholder="e.g., Margherita Pizza"
           required
@@ -105,7 +106,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ menuItem, onSubmit, onCance
           name="description"
           value={formData.description || ''}
           onChange={handleInputChange}
-          placeholder="e.g., Classic pizza with tomato, mozzarella, and basil"
+          placeholder="Classic tomato sauce, mozzarella, basil"
           disabled={isSubmitting}
         />
       </div>
@@ -114,11 +115,10 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ menuItem, onSubmit, onCance
         <Input
           id="price"
           name="price"
-          type="number"
-          step="0.01"
-          min="0.01"
-          value={formData.price}
-          onChange={handleInputChange}
+          type="text" // Use text to allow decimal input easily
+          inputMode="decimal" // Hint for mobile keyboards
+          value={formData.price || ''}
+          onChange={handlePriceChange}
           placeholder="e.g., 12.99"
           required
           disabled={isSubmitting}
@@ -131,7 +131,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ menuItem, onSubmit, onCance
           name="category"
           value={formData.category || ''}
           onChange={handleInputChange}
-          placeholder="e.g., Appetizers, Main Courses, Drinks"
+          placeholder="e.g., Pizza, Appetizer, Drink"
           disabled={isSubmitting}
         />
       </div>
@@ -143,22 +143,32 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ menuItem, onSubmit, onCance
           type="url"
           value={formData.image_url || ''}
           onChange={handleInputChange}
-          placeholder="https://yourdomain.com/item.jpg"
+          placeholder="https://yourdomain.com/image.jpg"
           disabled={isSubmitting}
         />
+        {formData.image_url && (
+           <div className="mt-2">
+             <img 
+               src={formData.image_url} 
+               alt="Image Preview" 
+               className="h-24 w-24 rounded-md object-cover border bg-gray-100"
+               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+           </div>
+        )}
       </div>
       <div className="flex items-center space-x-2 pt-2">
-        <Checkbox
-          id="is_available"
-          checked={formData.is_available}
-          onCheckedChange={handleCheckboxChange}
-          disabled={isSubmitting}
-        />
-        <Label htmlFor="is_available" className="cursor-pointer">
-          Item is available for ordering
-        </Label>
-      </div>
-      <div className="flex justify-end gap-2 pt-4">
+         <Switch
+           id="is_available"
+           name="is_available"
+           checked={formData.is_available ?? true}
+           onCheckedChange={handleSwitchChange}
+           disabled={isSubmitting}
+         />
+         <Label htmlFor="is_available">Available for Ordering</Label>
+       </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>

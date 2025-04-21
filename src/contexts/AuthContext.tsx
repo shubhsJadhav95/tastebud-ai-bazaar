@@ -108,6 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 full_name: rawData.full_name ?? null,
                 address: rawData.address ?? null,
                 phone: rawData.phone ?? null,
+                favoriteRestaurantIds: rawData.favoriteRestaurantIds ?? [], // Include favorites
                 // --- Use the CORRECTED type ---
                 user_type: finalUserType,
                 // Add other fields from UserProfile if necessary, using nullish coalescing

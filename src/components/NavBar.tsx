@@ -79,7 +79,7 @@ const NavBar: React.FC = () => {
                 )}
                 {userType === "restaurant" && (
                   <>
-                    <Link to="/restaurant/dashboard" className="text-gray-700 hover:text-food-primary transition-colors">
+                    <Link to="/restaurant/select" className="text-gray-700 hover:text-food-primary transition-colors">
                       Dashboard
                     </Link>
                     <Link to="/dashboard/restaurants" className="text-gray-700 hover:text-food-primary transition-colors">
@@ -176,7 +176,7 @@ const NavBar: React.FC = () => {
                 {userType === "restaurant" && (
                   <>
                     <Link 
-                      to="/restaurant/dashboard" 
+                      to="/restaurant/select" 
                       className="flex items-center text-gray-700 hover:text-food-primary transition-colors py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >

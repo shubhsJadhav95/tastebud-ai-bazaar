@@ -8,6 +8,7 @@ export interface UserProfile {
   user_type: 'customer' | 'restaurant'; // Adjusted based on your app's types
   address?: string | null; // Optional fields based on previous code
   phone?: string | null;   // Optional fields based on previous code
+  favoriteRestaurantIds?: string[]; // Added for storing favorite restaurant IDs
   createdAt?: Timestamp; // Optional or use serverTimestamp() on write
   updatedAt?: Timestamp; // Optional or use serverTimestamp() on write
 }
@@ -36,7 +37,7 @@ export interface Restaurant {
 }
 
 // Input type when creating a new restaurant (before ID, timestamps, lowercase are added)
-export type NewRestaurantData = Omit<Restaurant, 'id' | 'name_lowercase' | 'createdAt' | 'updatedAt'>;
+export type NewRestaurantData = Omit<Restaurant, 'id' | 'createdAt' | 'updatedAt'>;
 
 // Menu Item data stored in /menu_items/{itemId}
 export interface MenuItem {

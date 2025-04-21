@@ -10,6 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { format } from 'date-fns'; // For formatting timestamps
 
+const USD_TO_INR_RATE = 83; // TODO: Move to config or fetch dynamically
+
 const CustomerOrdersPage: React.FC = () => {
   const { user } = useAuthContext();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -133,13 +135,13 @@ const CustomerOrdersPage: React.FC = () => {
                 <ul className="list-disc list-inside mb-3 text-sm">
                   {order.items.map((item, index) => (
                     <li key={index}>
-                      {item.quantity} x {item.name} (@ ${item.price?.toFixed(2) ?? 'N/A'} each)
+                      {item.quantity} x {item.name} (@ ₹{(item.price * USD_TO_INR_RATE)?.toFixed(2) ?? 'N/A'} each)
                     </li>
                   ))}
                 </ul>
                 <Separator className="my-3"/>
                 <p className="text-right font-semibold">
-                  Total: ${order.totalAmount?.toFixed(2) ?? 'N/A'}
+                  Total: ₹{(order.totalAmount * USD_TO_INR_RATE)?.toFixed(2) ?? 'N/A'}
                 </p>
               </CardContent>
             </Card>

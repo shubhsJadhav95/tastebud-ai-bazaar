@@ -28,14 +28,11 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
   const isEditMode = !!restaurant;
 
   useEffect(() => {
-    // Pre-fill form if in edit mode
     if (isEditMode && restaurant) {
-      // Ensure we only pick fields relevant to the form
       const { id, createdAt, updatedAt, name_lowercase, ...editableData } = restaurant;
       setFormData(editableData);
     } else {
-      // Reset form for create mode
-      setFormData({ owner_id: user?.uid }); // Set owner_id if creating
+      setFormData({ owner_id: user?.uid });
     }
   }, [restaurant, isEditMode, user]);
 
@@ -60,7 +57,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
     setIsSubmitting(true);
     try {
       let savedRestaurant: Restaurant;
-      const dataToSubmit: Omit<Restaurant, 'id' | 'createdAt' | 'updatedAt'> = {
+      const dataToSubmit = {
         owner_id: user.uid,
         name: formData.name.trim(),
         name_lowercase: formData.name.trim().toLowerCase(),
@@ -69,26 +66,25 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
         contactNumber: formData.contactNumber?.trim() || '',
         logoUrl: formData.logoUrl?.trim() || '',
         coverImageUrl: formData.coverImageUrl?.trim() || '',
-        // Include other fields from your Restaurant type if they should be saved
-        // Ensure required fields have defaults or are handled
+        price_range: formData.price_range || null,
+        delivery_time: formData.delivery_time || null,
+        phone: formData.phone || null,
+        description: formData.description || null,
       };
 
       if (isEditMode && restaurant?.id) {
-        await restaurantService.updateRestaurant(restaurant.id, dataToSubmit);
+        await restaurantService.updateRestaurant(restaurant.id, dataToSubmit as Partial<Restaurant>); 
         toast.success(`Restaurant "${dataToSubmit.name}" updated successfully!`);
-        // Construct the updated restaurant object for the callback
-        savedRestaurant = { ...restaurant, ...dataToSubmit }; 
+        savedRestaurant = { ...restaurant, ...(dataToSubmit as Partial<Restaurant>) }; 
       } else {
-        // Create new restaurant
-        savedRestaurant = await restaurantService.createRestaurant(dataToSubmit);
+        savedRestaurant = await restaurantService.createRestaurant(dataToSubmit); 
         toast.success(`Restaurant "${savedRestaurant.name}" created successfully!`);
-        // Optionally navigate after creation, e.g., to the new restaurant's manage page
-        // navigate(`/dashboard/restaurants/${savedRestaurant.id}`);
       }
 
       if (onSave) {
         onSave(savedRestaurant);
       }
+
     } catch (error: any) {
       console.error('Error saving restaurant:', error);
       toast.error(error.message || "An error occurred while saving.");
@@ -116,6 +112,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               onChange={handleInputChange}
               placeholder="e.g., The Delicious Place"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -126,6 +123,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.cuisine || ''}
               onChange={handleInputChange}
               placeholder="e.g., Italian, Mexican, Cafe"
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -136,6 +134,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.address || ''}
               onChange={handleInputChange}
               placeholder="123 Main St, Anytown, USA"
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -146,6 +145,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.contactNumber || ''}
               onChange={handleInputChange}
               placeholder="+1 (555) 123-4567"
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -157,7 +157,18 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.logoUrl || ''}
               onChange={handleInputChange}
               placeholder="https://yourdomain.com/logo.png"
+              disabled={isSubmitting}
             />
+            {formData.logoUrl && (
+               <div className="mt-2">
+                 <img 
+                    src={formData.logoUrl} 
+                    alt="Logo Preview" 
+                    className="h-20 w-20 rounded-md object-contain border bg-gray-100"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                 />
+               </div>
+            )}
           </div>
           <div>
             <Label htmlFor="coverImageUrl">Cover Image URL</Label>
@@ -168,7 +179,18 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.coverImageUrl || ''}
               onChange={handleInputChange}
               placeholder="https://yourdomain.com/cover.jpg"
+              disabled={isSubmitting}
             />
+            {formData.coverImageUrl && (
+               <div className="mt-2">
+                 <img 
+                   src={formData.coverImageUrl} 
+                   alt="Cover Preview" 
+                   className="h-32 w-full max-w-sm rounded-md object-cover border bg-gray-100"
+                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                 />
+               </div>
+            )}
           </div>
         </CardContent>
         <CardFooter>

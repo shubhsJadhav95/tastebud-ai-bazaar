@@ -7,7 +7,7 @@ import {
   signInWithPopup,
   User as FirebaseUser, // Rename to avoid conflict if UserProfile uses 'User'
 } from "firebase/auth";
-import { doc, getDoc, setDoc, getFirestore, serverTimestamp } from "firebase/firestore"; 
+import { doc, getDoc, setDoc, getFirestore, serverTimestamp, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore"; 
 import { auth, db } from "@/integrations/firebase/client"; // Import initialized auth and db
 import { UserProfile } from "@/types";
 import { toast } from "sonner";
@@ -203,6 +203,50 @@ export const authService = {
         toast.error(error.message || "Failed to sign in with Google");
       }
       return false;
+    }
+  },
+
+  /**
+   * Adds a restaurant ID to the user's favorites.
+   * @param userId The ID of the user.
+   * @param restaurantId The ID of the restaurant to favorite.
+   */
+  async addFavoriteRestaurant(userId: string, restaurantId: string): Promise<void> {
+    if (!userId || !restaurantId) {
+      throw new Error("User ID and Restaurant ID are required.");
+    }
+    try {
+      const userDocRef = doc(db, "users", userId);
+      await updateDoc(userDocRef, {
+        favoriteRestaurantIds: arrayUnion(restaurantId)
+      });
+      console.log(`Added restaurant ${restaurantId} to favorites for user ${userId}`);
+    } catch (error) {
+      console.error("Error adding favorite restaurant:", error);
+      toast.error("Failed to add favorite.");
+      throw error; // Re-throw to allow component handling
+    }
+  },
+
+  /**
+   * Removes a restaurant ID from the user's favorites.
+   * @param userId The ID of the user.
+   * @param restaurantId The ID of the restaurant to unfavorite.
+   */
+  async removeFavoriteRestaurant(userId: string, restaurantId: string): Promise<void> {
+    if (!userId || !restaurantId) {
+      throw new Error("User ID and Restaurant ID are required.");
+    }
+    try {
+      const userDocRef = doc(db, "users", userId);
+      await updateDoc(userDocRef, {
+        favoriteRestaurantIds: arrayRemove(restaurantId)
+      });
+      console.log(`Removed restaurant ${restaurantId} from favorites for user ${userId}`);
+    } catch (error) {
+      console.error("Error removing favorite restaurant:", error);
+      toast.error("Failed to remove favorite.");
+      throw error; // Re-throw to allow component handling
     }
   },
 

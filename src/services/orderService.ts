@@ -1,5 +1,5 @@
 import { db } from '@/integrations/firebase/client'; // Corrected import path
-import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError, getDoc, writeBatch } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError, getDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { Order, OrderStatus } from '@/types'; // Import Order type as well
 
 export const orderService = {
@@ -139,5 +139,49 @@ export const orderService = {
       console.error(`Error fetching restaurant name for ID ${restaurantId}:`, error);
       return null;
     }
-  }
+  },
+
+  /**
+   * Fetches a summary of today's orders for a restaurant.
+   * @param restaurantId The ID of the restaurant.
+   * @returns A promise resolving to an object with order count and total earnings for today.
+   */
+  async getTodaysOrderSummary(restaurantId: string): Promise<{ count: number; totalEarnings: number }> {
+    if (!restaurantId) {
+      console.error("Restaurant ID required for order summary.");
+      return { count: 0, totalEarnings: 0 };
+    }
+    try {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      console.log(`[getTodaysOrderSummary] Fetching orders for restaurant ${restaurantId} since ${todayStart.toISOString()}`);
+      
+      const ordersRef = collection(db, 'orders');
+      const q = query(
+        ordersRef,
+        where('restaurant_id', '==', restaurantId),
+        where('createdAt', '>=', Timestamp.fromDate(todayStart))
+      );
+
+      const querySnapshot = await getDocs(q);
+      console.log(`[getTodaysOrderSummary] Query returned ${querySnapshot.size} documents.`); // Log number of docs found
+      
+      let count = 0;
+      let totalEarnings = 0;
+      querySnapshot.forEach((doc) => {
+        const order = doc.data() as Order;
+        console.log(`[getTodaysOrderSummary] Processing order ${doc.id}: CreatedAt=${order.createdAt?.toDate().toISOString()}, TotalAmount=${order.totalAmount}`); // Log details
+        count++;
+        // Ensure totalAmount is a number before adding
+        totalEarnings += (typeof order.totalAmount === 'number') ? order.totalAmount : 0;
+      });
+
+      console.log(`[getTodaysOrderSummary] Final summary for ${restaurantId}: ${count} orders, $${totalEarnings.toFixed(2)} earnings`);
+      return { count, totalEarnings };
+
+    } catch (error) {
+      console.error(`[getTodaysOrderSummary] Error fetching summary for ${restaurantId}:`, error);
+      return { count: 0, totalEarnings: 0 }; 
+    }
+  },
 }; 

@@ -23,8 +23,8 @@ const RestaurantLogin: React.FC = () => {
       const success = await authService.login(email, password, 'restaurant');
 
       if (success) {
-        toast.success('Login successful! Redirecting to dashboard...');
-        navigate('/restaurant/dashboard'); // Navigate to dashboard on successful login
+        toast.success('Login successful! Redirecting...');
+        navigate('/restaurant/select'); // Navigate to the new selection page
       } else {
         // Error toast is likely handled within authService.login
         // toast.error('Login failed. Please check credentials or user type.');

@@ -11,7 +11,8 @@ import Index from "./pages/Index";
 import CustomerLogin from "./pages/CustomerLogin";
 import RestaurantLogin from "./pages/RestaurantLogin";
 import CustomerHome from "./pages/CustomerHome";
-import RestaurantDashboard from "./pages/RestaurantDashboard";
+// import RestaurantDashboard from "./pages/RestaurantDashboard"; // Keep old one commented/removed for now
+import RestaurantSelect from "./pages/RestaurantSelect"; // Import the new select page
 import RestaurantDetail from "./pages/RestaurantDetail";
 import RestaurantMenu from "./pages/RestaurantMenu";
 import RestaurantProfile from "./pages/RestaurantProfile";
@@ -47,7 +48,7 @@ const App = () => (
               <Route path="/customer/profile" element={<CustomerProfile />} />
               <Route path="/customer/orders" element={<CustomerOrdersPage />} />
               <Route path="/customer/restaurant/:id" element={<RestaurantDetail />} />
-              <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
+              <Route path="/restaurant/select" element={<RestaurantSelect />} />
               <Route path="/restaurant/menu" element={<RestaurantMenu />} />
               <Route path="/restaurant/profile" element={<RestaurantProfile />} />
               {/* <Route path="/restaurant/orders" element={<RestaurantOrders />} /> */}
