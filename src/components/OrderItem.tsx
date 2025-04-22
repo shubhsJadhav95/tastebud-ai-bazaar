@@ -1,5 +1,4 @@
-
-import React from "react";
+import * as React from "react";
 import { CartItem } from "../context/CartContext";
 import { IndianRupee } from "lucide-react";
 
@@ -22,9 +21,10 @@ const OrderItem: React.FC<OrderItemProps> = ({
     <div className="flex items-center py-4 border-b border-gray-200 animate-fade-in">
       <div className="h-16 w-16 min-w-16 rounded overflow-hidden">
         <img
-          src={item.image}
+          src={item.image_url || '/placeholder.svg'}
           alt={item.name}
           className="w-full h-full object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
         />
       </div>
       <div className="ml-4 flex-grow">

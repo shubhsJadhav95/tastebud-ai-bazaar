@@ -184,4 +184,30 @@ export const orderService = {
       return { count: 0, totalEarnings: 0 }; 
     }
   },
+
+  /**
+   * Fetches a single order by its ID from the main orders collection.
+   * @param orderId The ID of the order to fetch.
+   * @returns A promise resolving to the Order object or null if not found/error.
+   */
+  async getOrderById(orderId: string): Promise<Order | null> {
+    if (!orderId) {
+      console.error('Order ID is required to fetch an order.');
+      return null; // Or throw an error
+    }
+    try {
+      const orderDocRef = doc(db, 'orders', orderId);
+      const docSnap = await getDoc(orderDocRef);
+
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Order;
+      } else {
+        console.warn(`Order document not found for ID: ${orderId}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`Error fetching order details for ID ${orderId}:`, error);
+      return null; // Or throw error depending on desired handling
+    }
+  },
 }; 

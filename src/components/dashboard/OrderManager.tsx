@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FirestoreError } from 'firebase/firestore';
 import { orderService } from '@/services/orderService'; // Adjust path if needed
 import { Order, OrderStatus } from '@/types'; // Adjust path if needed
@@ -52,6 +54,7 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<Record<string, boolean>>({}); // Track loading state per order
+  const navigate = useNavigate();
 
   useEffect(() => {
     setLoading(true);
@@ -164,7 +167,11 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
           </TableHeader>
           <TableBody>
             {orders.map((order) => (
-              <TableRow key={order.id}>
+              <TableRow 
+                key={order.id} 
+                onClick={() => navigate(`/dashboard/orders/${order.id}`)}
+                className="cursor-pointer hover:bg-muted/50"
+              >
                 <TableCell className="font-mono text-xs" title={order.id}>{order.id.substring(0, 8)}...</TableCell>
                 <TableCell>{order.createdAt ? format(order.createdAt.toDate(), 'PPpp') : 'N/A'}</TableCell>
                 <TableCell>{order.customerName || order.customer_id.substring(0,8) || 'N/A'}</TableCell>

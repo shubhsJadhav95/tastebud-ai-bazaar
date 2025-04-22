@@ -29,6 +29,7 @@ import RestaurantCreatePage from "./pages/dashboard/restaurants/RestaurantCreate
 import RestaurantManagePage from "./pages/dashboard/restaurants/RestaurantManagePage";
 // Import the new orders page
 import RestaurantOrdersPage from "./pages/dashboard/orders/RestaurantOrdersPage";
+import OrderDetailPage from "./pages/dashboard/orders/OrderDetailPage"; // Import the new detail page
 
 const queryClient = new QueryClient();
 
@@ -59,8 +60,9 @@ const App = () => (
               <Route path="/dashboard/restaurants" element={<RestaurantListPage />} />
               <Route path="/dashboard/restaurants/new" element={<RestaurantCreatePage />} />
               <Route path="/dashboard/restaurants/:restaurantId" element={<RestaurantManagePage />} />
-              {/* Add Order Management Route */}
+              {/* Order Management Routes */}
               <Route path="/dashboard/orders" element={<RestaurantOrdersPage />} /> 
+              <Route path="/dashboard/orders/:orderId" element={<OrderDetailPage />} /> {/* Add route for order details */}
               {/* --- End New Routes --- */}
 
               <Route path="*" element={<NotFound />} />

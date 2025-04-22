@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import * as React from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useRestaurantsByOwner } from '@/hooks/useRestaurantsByOwner';
@@ -83,10 +84,10 @@ const RestaurantSelect: React.FC = () => {
             {restaurants.map(restaurant => (
               <Card key={restaurant.id} className="overflow-hidden flex flex-col">
                 <img 
-                  src={restaurant.image_url || '/placeholder-image.jpg'} 
+                  src={restaurant.image_url || '/placeholder.svg'} 
                   alt={restaurant.name}
                   className="h-40 w-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-image.jpg'; }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
                 />
                 <CardHeader className="pb-2">
                   <CardTitle>{restaurant.name}</CardTitle>
