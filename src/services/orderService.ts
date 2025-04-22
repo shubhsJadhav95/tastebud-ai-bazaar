@@ -1,6 +1,6 @@
 import { db } from '@/integrations/firebase/client'; // Corrected import path
-import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError, getDoc, writeBatch, getDocs } from 'firebase/firestore';
-import { Order, OrderStatus } from '@/types'; // Import Order type as well
+import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError, getDoc, writeBatch, getDocs, serverTimestamp, FieldValue } from 'firebase/firestore';
+import { Order, OrderStatus, OrderItem } from '@/types'; // Import Order type as well
 import { useAuthContext } from "@/contexts/AuthContext"; // Might be needed if service needs user ID directly
 
 export const orderService = {
@@ -88,6 +88,43 @@ export const orderService = {
     } catch (error) {
       console.error(`Error updating order ${orderId} status:`, error);
       throw new Error('Failed to update order status.');
+    }
+  },
+
+  /**
+   * Updates specific details of an order in both the main collection and the user's subcollection.
+   * @param orderId - The ID of the order to update.
+   * @param customerId - The ID of the customer who placed the order.
+   * @param updates - An object containing the fields to update (e.g., { didDonate: true }). 
+   *                 Allows FieldValue for timestamp fields.
+   */
+  async updateOrderDetails(orderId: string, customerId: string, updates: Partial<Omit<Order, 'id' | 'items' | 'updatedAt'> & { updatedAt?: FieldValue }>): Promise<void> {
+    if (!orderId || !customerId || !updates || Object.keys(updates).length === 0) {
+      console.error('Order ID, Customer ID, and updates are required.');
+      throw new Error('Missing required parameters for updating order details.');
+    }
+
+    const batch = writeBatch(db);
+    const mainOrderRef = doc(db, 'orders', orderId);
+    const userOrderRef = doc(db, 'users', customerId, 'orders', orderId);
+
+    // Ensure updatedAt is always included in the update using serverTimestamp()
+    // The type definition now correctly handles this FieldValue
+    const updateData = { ...updates, updatedAt: serverTimestamp() };
+
+    try {
+      // Check if refs point to valid locations if necessary (optional)
+      // const mainDocSnap = await getDoc(mainOrderRef); // Example check
+      // if (!mainDocSnap.exists()) throw new Error(`Main order ${orderId} not found.`);
+      
+      batch.update(mainOrderRef, updateData);
+      batch.update(userOrderRef, updateData);
+
+      await batch.commit();
+      console.log(`Order ${orderId} details updated in both locations:`, updateData);
+    } catch (error) {
+      console.error(`Error updating order ${orderId} details:`, error);
+      throw new Error('Failed to update order details.');
     }
   },
 

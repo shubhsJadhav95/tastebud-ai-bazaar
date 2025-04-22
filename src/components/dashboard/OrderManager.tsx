@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle, Clock, Package, Truck, XCircle, Utensils } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Package, Truck, XCircle, Utensils, IndianRupee } from 'lucide-react';
 import { format } from 'date-fns'; // For formatting timestamps
 
 interface OrderManagerProps {
@@ -175,7 +175,10 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
                 <TableCell className="font-mono text-xs" title={order.id}>{order.id.substring(0, 8)}...</TableCell>
                 <TableCell>{order.createdAt ? format(order.createdAt.toDate(), 'PPpp') : 'N/A'}</TableCell>
                 <TableCell>{order.customerName || order.customer_id.substring(0,8) || 'N/A'}</TableCell>
-                <TableCell className="text-right font-medium">${order.totalAmount.toFixed(2)}</TableCell>
+                <TableCell className="text-right font-medium flex items-center justify-end">
+                  <IndianRupee size={14} className="mr-0.5" />
+                  {order.totalAmount.toFixed(2)}
+                </TableCell>
                 <TableCell>
                   <Select 
                     value={order.status}

@@ -21,6 +21,7 @@ import Cart from "./pages/Cart";
 import OrderTracking from "./pages/OrderTracking";
 import RestaurantOrders from "./pages/RestaurantOrders";
 import CustomerOrdersPage from "./pages/customer/Orders";
+import RewardsPage from "./pages/customer/RewardsPage"; // Import the new RewardsPage
 import NotFound from "./pages/NotFound";
 
 // Import the new restaurant dashboard pages
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/customer/home" element={<CustomerHome />} />
               <Route path="/customer/profile" element={<CustomerProfile />} />
               <Route path="/customer/orders" element={<CustomerOrdersPage />} />
+              <Route path="/customer/rewards" element={<RewardsPage />} />
               <Route path="/customer/restaurant/:id" element={<RestaurantDetail />} />
               <Route path="/restaurant/select" element={<RestaurantSelect />} />
               <Route path="/restaurant/menu" element={<RestaurantMenu />} />

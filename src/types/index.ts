@@ -9,6 +9,10 @@ export interface UserProfile {
   address?: string | null; // Optional fields based on previous code
   phone?: string | null;   // Optional fields based on previous code
   favoriteRestaurantIds?: string[]; // Added for storing favorite restaurant IDs
+  supercoins?: number; // Current Supercoins balance
+  referralCode?: string | null; // Added user's unique referral code
+  referredByCode?: string | null; // Added optional: Code user was referred by
+  totalCoinDiscountClaimed?: number; // Added: Tracks total value claimed via coins
   createdAt?: Timestamp; // Optional or use serverTimestamp() on write
   updatedAt?: Timestamp; // Optional or use serverTimestamp() on write
 }

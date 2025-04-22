@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { UserCircle, MapPin, Phone, Mail, Edit, Save } from 'lucide-react';
+import { UserCircle, MapPin, Phone, Mail, Edit, Save, Gift } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 // Firestore imports
@@ -52,14 +52,6 @@ const CustomerProfile: React.FC = () => {
       });
     }
   }, [loading, user, profile, navigate]);
-  
-  // Display auth error if present
-  useEffect(() => {
-    if (authError) {
-      const message = typeof authError === 'string' ? authError : authError.message;
-      toast.error(message || "An authentication error occurred.");
-    }
-  }, [authError]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -218,39 +210,50 @@ const CustomerProfile: React.FC = () => {
                         </Button>
                       </form>
                     ) : (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                          <Label className="text-sm text-gray-500">Full Name</Label>
-                          <p className="font-medium flex items-center">
-                            <UserCircle size={18} className="mr-2 text-gray-500" />
-                            {profile?.full_name || 'Not specified'}
-                          </p>
+                      <>
+                        <div className="grid gap-4 md:grid-cols-2 mb-6">
+                          <div>
+                            <Label className="text-sm text-gray-500">Full Name</Label>
+                            <p className="font-medium flex items-center">
+                              <UserCircle size={18} className="mr-2 text-gray-500" />
+                              {profile?.full_name || 'Not specified'}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-sm text-gray-500">Email</Label>
+                            <p className="font-medium flex items-center">
+                              <Mail size={18} className="mr-2 text-gray-500" />
+                              {user?.email}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-sm text-gray-500">Address</Label>
+                            <p className="font-medium flex items-center">
+                              <MapPin size={18} className="mr-2 text-gray-500" />
+                              {profile?.address || 'Not specified'}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-sm text-gray-500">Phone</Label>
+                            <p className="font-medium flex items-center">
+                              <Phone size={18} className="mr-2 text-gray-500" />
+                              {profile?.phone || 'Not specified'}
+                            </p>
+                          </div>
                         </div>
                         
-                        <div>
-                          <Label className="text-sm text-gray-500">Email</Label>
-                          <p className="font-medium flex items-center">
-                            <Mail size={18} className="mr-2 text-gray-500" />
-                            {user?.email}
-                          </p>
+                        <div className="mt-6 border-t pt-4">
+                          <Button asChild variant="outline" className="w-full sm:w-auto">
+                            <Link to="/customer/rewards">
+                              <Gift size={16} className="mr-2" />
+                              View My Rewards & Referrals
+                            </Link>
+                          </Button>
                         </div>
-                        
-                        <div>
-                          <Label className="text-sm text-gray-500">Address</Label>
-                          <p className="font-medium flex items-center">
-                            <MapPin size={18} className="mr-2 text-gray-500" />
-                            {profile?.address || 'Not specified'}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <Label className="text-sm text-gray-500">Phone</Label>
-                          <p className="font-medium flex items-center">
-                            <Phone size={18} className="mr-2 text-gray-500" />
-                            {profile?.phone || 'Not specified'}
-                          </p>
-                        </div>
-                      </div>
+                      </>
                     )}
                   </div>
                   

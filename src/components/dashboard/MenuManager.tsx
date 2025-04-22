@@ -17,7 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from 'sonner';
-import { PlusCircle, Edit, Trash2, AlertCircle, Loader2 } from 'lucide-react'; // Add icons
+import { PlusCircle, Edit, Trash2, AlertCircle, Loader2, IndianRupee } from 'lucide-react'; // Add icons
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import MenuItemForm from '@/components/forms/MenuItemForm'; // Import the form
 
@@ -170,7 +170,10 @@ const MenuManager: React.FC<MenuManagerProps> = ({ restaurantId }) => {
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.category || 'N/A'}</TableCell>
                     <TableCell className="text-sm text-gray-600 max-w-xs truncate">{item.description || '-'}</TableCell>
-                    <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right flex items-center justify-end">
+                      <IndianRupee size={14} className="mr-0.5" />
+                      {item.price.toFixed(2)}
+                    </TableCell>
                     <TableCell className="space-x-2 whitespace-nowrap">
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleEditClick(item)}>
                         <Edit className="h-4 w-4" />

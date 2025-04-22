@@ -20,8 +20,19 @@ import {
   Utensils,
   DollarSign,
   Image,
-  Save
+  Save,
+  IndianRupee
 } from 'lucide-react';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 
 const RestaurantProfile: React.FC = () => {
   const { user, profile, loading: authLoading, error: authError } = useAuthContext();
@@ -235,8 +246,8 @@ const RestaurantProfile: React.FC = () => {
                         name="price_range"
                         value={formData.price_range ?? ''}
                         onChange={handleInputChange}
-                        placeholder="$, $$, $$$"
-                        icon={<DollarSign size={18} />}
+                        placeholder="₹, ₹₹, ₹₹₹"
+                        icon={<IndianRupee size={18} />}
                       />
                     </div>
                   </div>

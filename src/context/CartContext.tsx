@@ -1,6 +1,23 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { MenuItem } from "@/types";
 
+// --- Tiered Discount Logic Helper --- (Moved outside for clarity, used by reducer)
+interface DiscountTier {
+  coinsNeeded: number;
+  discountPercent: number;
+}
+const getDiscountTierForCoins = (availableCoins: number): DiscountTier | null => {
+  if (availableCoins >= 800) return { coinsNeeded: 800, discountPercent: 80 };
+  if (availableCoins >= 700) return { coinsNeeded: 700, discountPercent: 70 };
+  if (availableCoins >= 500) return { coinsNeeded: 500, discountPercent: 60 };
+  if (availableCoins >= 400) return { coinsNeeded: 400, discountPercent: 40 };
+  if (availableCoins >= 300) return { coinsNeeded: 300, discountPercent: 30 };
+  if (availableCoins >= 200) return { coinsNeeded: 200, discountPercent: 20 };
+  if (availableCoins >= 100) return { coinsNeeded: 100, discountPercent: 10 };
+  return null;
+};
+// --- End Tiered Discount Logic ---
+
 export interface CartItem extends MenuItem {
   quantity: number;
 }
@@ -8,6 +25,13 @@ export interface CartItem extends MenuItem {
 interface CartState {
   items: CartItem[];
   restaurantId: string | null;
+  subtotal: number;
+  appliedCouponCode: string | null;
+  couponDiscountAmount: number;
+  // Coin state
+  appliedCoins: number; // How many coins are currently applied (due to auto-apply)
+  coinDiscountAmount: number; // Discount amount from applied coins
+  // Final total
   totalAmount: number;
 }
 
@@ -16,6 +40,10 @@ type CartAction =
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
   | { type: "CLEAR_CART" }
+  | { type: "APPLY_COUPON"; payload: { code: string; discountAmount: number } }
+  | { type: "REMOVE_COUPON" }
+  | { type: "APPLY_COINS"; payload: { coins: number; discountAmount: number } }
+  | { type: "REMOVE_COINS" };
 
 interface CartContextType {
   cart: CartState;
@@ -23,6 +51,10 @@ interface CartContextType {
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
+  applyCoupon: (code: string, discountAmount: number) => void;
+  removeCoupon: () => void;
+  applyCoins: (coins: number, discountAmount: number) => void;
+  removeCoins: () => void;
   itemCount: number;
 }
 
@@ -31,123 +63,209 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const initialState: CartState = {
   items: [],
   restaurantId: null,
+  subtotal: 0,
+  appliedCouponCode: null,
+  couponDiscountAmount: 0,
+  appliedCoins: 0,
+  coinDiscountAmount: 0,
   totalAmount: 0,
 };
 
-const calculateTotalAmount = (items: CartItem[]): number => {
+// Helper to calculate subtotal (before discounts)
+const calculateSubtotal = (items: CartItem[]): number => {
   return items.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
 };
 
-export const convertToRupees = (price: number): number => {
-  return price;
+// Helper to calculate final total amount considering discounts
+const calculateFinalTotal = (subtotal: number, couponDiscount: number, coinDiscount: number): number => {
+    const total = subtotal - couponDiscount - coinDiscount;
+    return Math.max(0, total); // Prevent negative totals
 };
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
+  let newState = { ...state }; // Start with a copy of the current state
+
   switch (action.type) {
     case "ADD_ITEM": {
       const newItem = action.payload.item;
-      
-      if (!newItem || typeof newItem.price !== 'number') {
-         console.error("Attempted to add invalid item:", newItem);
-         return state;
-      }
+      if (!newItem || typeof newItem.price !== 'number') return state; // Invalid item
+
+      let updatedItems: CartItem[];
+      let newRestaurantId = state.restaurantId;
 
       if (state.items.length === 0) {
-        const cartItem: CartItem = { ...newItem, quantity: 1 };
-        const newItems = [cartItem];
-        return {
-          ...state,
-          items: newItems,
-          restaurantId: newItem.restaurant_id,
-          totalAmount: calculateTotalAmount(newItems)
-        };
-      }
-      
-      if (state.restaurantId && state.restaurantId !== newItem.restaurant_id) {
-        console.warn("Attempted to add item from different restaurant.");
-        return state;
-      }
-      
-      const existingItemIndex = state.items.findIndex(item => item.id === newItem.id);
-      let updatedItems: CartItem[];
-
-      if (existingItemIndex >= 0) {
-        updatedItems = [...state.items];
-        updatedItems[existingItemIndex] = {
-          ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + 1
-        };
+        // First item, set restaurant ID
+        newRestaurantId = newItem.restaurant_id;
+        updatedItems = [{ ...newItem, quantity: 1 }];
+      } else if (state.restaurantId && state.restaurantId !== newItem.restaurant_id) {
+        // Item from different restaurant, clear cart and add new item
+        console.warn("Adding item from different restaurant. Clearing previous cart.");
+        newRestaurantId = newItem.restaurant_id;
+        updatedItems = [{ ...newItem, quantity: 1 }];
+        // Reset discounts when clearing for new restaurant
+        newState = { ...initialState }; // Reset fully
       } else {
-        const cartItem: CartItem = { ...newItem, quantity: 1 };
-        updatedItems = [...state.items, cartItem];
+        // Item from the same restaurant
+        const existingItemIndex = state.items.findIndex(item => item.id === newItem.id);
+        if (existingItemIndex >= 0) {
+          // Increase quantity
+          updatedItems = [...state.items];
+          updatedItems[existingItemIndex] = { ...updatedItems[existingItemIndex], quantity: updatedItems[existingItemIndex].quantity + 1 };
+        } else {
+          // Add new item
+          updatedItems = [...state.items, { ...newItem, quantity: 1 }];
+        }
+        newRestaurantId = state.restaurantId; // Restaurant ID remains the same
       }
-      
-      return {
-        ...state,
-        items: updatedItems,
-        restaurantId: newItem.restaurant_id,
-        totalAmount: calculateTotalAmount(updatedItems)
-      };
+      newState.items = updatedItems;
+      newState.restaurantId = newRestaurantId;
+      break; // Recalculate totals below
     }
-    
+
     case "REMOVE_ITEM": {
-      const updatedItems = state.items.filter(item => item.id !== action.payload);
-      const newState = {
-        ...state,
-        items: updatedItems,
-        totalAmount: calculateTotalAmount(updatedItems),
-        restaurantId: updatedItems.length === 0 ? null : state.restaurantId,
-      };
-      return newState;
+      newState.items = state.items.filter(item => item.id !== action.payload);
+      if (newState.items.length === 0) {
+          newState.restaurantId = null;
+          // Reset discounts if cart becomes empty
+          newState.appliedCouponCode = null;
+          newState.couponDiscountAmount = 0;
+          newState.appliedCoins = 0;
+          newState.coinDiscountAmount = 0;
+      }
+      break; // Recalculate totals below
     }
-    
+
     case "UPDATE_QUANTITY": {
       const { id, quantity } = action.payload;
       if (quantity <= 0) {
-        return cartReducer(state, { type: "REMOVE_ITEM", payload: id });
+        // Remove item if quantity is zero or less
+        newState.items = state.items.filter(item => item.id !== id);
+      } else {
+        newState.items = state.items.map(item => item.id === id ? { ...item, quantity: Number(quantity) || 1 } : item );
       }
-      const updatedItems = state.items.map(item =>
-        item.id === id ? { ...item, quantity: Number(quantity) || 1 } : item
-      );
-      return {
-        ...state,
-        items: updatedItems,
-        totalAmount: calculateTotalAmount(updatedItems)
-      };
+       if (newState.items.length === 0) {
+          newState.restaurantId = null;
+          // Reset discounts if cart becomes empty
+          newState.appliedCouponCode = null;
+          newState.couponDiscountAmount = 0;
+          newState.appliedCoins = 0;
+          newState.coinDiscountAmount = 0;
+       }
+      break; // Recalculate totals below
     }
 
     case "CLEAR_CART": {
-        return { ...initialState };
+      // Reset fully
+      return { ...initialState };
     }
-    
+
+    case "APPLY_COUPON": {
+        const { code, discountAmount } = action.payload;
+        const tempSubtotal = calculateSubtotal(state.items); // Use current items for subtotal
+        const actualDiscount = Math.min(tempSubtotal, discountAmount);
+        
+        // Applying a coupon removes coin discount
+        newState.appliedCouponCode = code;
+        newState.couponDiscountAmount = actualDiscount;
+        newState.appliedCoins = 0; 
+        newState.coinDiscountAmount = 0;
+        newState.subtotal = tempSubtotal; // Update subtotal explicitly here
+        newState.totalAmount = calculateFinalTotal(tempSubtotal, actualDiscount, 0);
+        return newState; // Return early as totals are calculated here
+    }
+    case "REMOVE_COUPON": {
+        newState.appliedCouponCode = null;
+        newState.couponDiscountAmount = 0;
+        // Recalculate totals below (no auto coin logic anymore)
+        break;
+    }
+    case "APPLY_COINS": {
+         const { coins, discountAmount } = action.payload;
+         const tempSubtotal = calculateSubtotal(state.items);
+         const actualDiscount = Math.min(tempSubtotal, discountAmount);
+         
+         // Applying coins removes coupon discount
+         newState.appliedCoins = coins;
+         newState.coinDiscountAmount = actualDiscount;
+         newState.appliedCouponCode = null;
+         newState.couponDiscountAmount = 0;
+         newState.subtotal = tempSubtotal;
+         newState.totalAmount = calculateFinalTotal(tempSubtotal, 0, actualDiscount);
+         return newState;
+     }
+     case "REMOVE_COINS": {
+         newState.appliedCoins = 0;
+         newState.coinDiscountAmount = 0;
+         // Recalculate totals below
+         break;
+     }
+
     default:
-      return state;
+      return state; // No change for unknown actions
   }
+
+  // --- Recalculate Subtotal and Final Total (Simpler version) ---
+  // This runs after ADD_ITEM, REMOVE_ITEM, UPDATE_QUANTITY, REMOVE_COUPON, REMOVE_COINS
+  
+  newState.subtotal = calculateSubtotal(newState.items);
+
+  // Recalculate discounts based on new subtotal, ensuring they don't exceed it
+  newState.couponDiscountAmount = newState.appliedCouponCode ? Math.min(newState.subtotal, newState.couponDiscountAmount) : 0;
+  newState.coinDiscountAmount = newState.appliedCoins > 0 ? Math.min(newState.subtotal, newState.coinDiscountAmount) : 0;
+  
+  // Ensure only one discount type is active
+  if (newState.couponDiscountAmount > 0) {
+      newState.appliedCoins = 0;
+      newState.coinDiscountAmount = 0;
+  } else if (newState.coinDiscountAmount > 0) {
+      newState.appliedCouponCode = null;
+      newState.couponDiscountAmount = 0;
+  } 
+
+  // Calculate final total
+  newState.totalAmount = calculateFinalTotal(
+      newState.subtotal, 
+      newState.couponDiscountAmount, 
+      newState.coinDiscountAmount
+  );
+
+  return newState;
 };
+
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, dispatch] = useReducer(cartReducer, initialState, (init) => {
+    // Load saved cart items and restaurant ID from localStorage
     try {
       const savedCart = localStorage.getItem("cart");
       if (savedCart) {
         const parsed = JSON.parse(savedCart);
-        if (parsed && Array.isArray(parsed.items) && typeof parsed.restaurantId === 'string' || parsed.restaurantId === null) {
-           parsed.totalAmount = calculateTotalAmount(parsed.items);
-           return parsed as CartState;
+        if (parsed && Array.isArray(parsed.items)) {
+           const loadedItems = parsed.items as CartItem[];
+           const loadedRestaurantId = typeof parsed.restaurantId === 'string' ? parsed.restaurantId : null;
+           const loadedSubtotal = calculateSubtotal(loadedItems);
+           return {
+                ...initialState, 
+                items: loadedItems,
+                restaurantId: loadedRestaurantId,
+                subtotal: loadedSubtotal,
+                totalAmount: loadedSubtotal, 
+           };
         }
       }
     } catch (error) {
       console.error("Error reading cart from localStorage:", error);
-      localStorage.removeItem("cart");
+      localStorage.removeItem("cart"); // Clear corrupted cart
     }
-    return init;
+    return init; // Return initial state if loading fails
   });
   
+  // Save only items and restaurant ID to localStorage
   useEffect(() => {
     try {
-        const stateToSave = { 
-            items: cart.items, 
-            restaurantId: cart.restaurantId 
+        const stateToSave = {
+            items: cart.items,
+            restaurantId: cart.restaurantId
         };
         localStorage.setItem("cart", JSON.stringify(stateToSave));
     } catch (error) {
@@ -155,25 +273,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [cart.items, cart.restaurantId]);
   
-  const addItem = (item: MenuItem) => {
-    if (!item || !item.id || typeof item.price !== 'number') {
-        console.error("Attempted to add invalid item:", item);
-        return;
-    }
-    dispatch({ type: "ADD_ITEM", payload: { item } });
-  };
-  
-  const removeItem = (id: string) => {
-    dispatch({ type: "REMOVE_ITEM", payload: id });
-  };
-  
-  const updateQuantity = (id: string, quantity: number) => {
-    dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } });
-  };
-  
-  const clearCart = () => {
-    dispatch({ type: "CLEAR_CART" });
-  };
+  // --- Dispatcher functions ---
+  const addItem = (item: MenuItem) => dispatch({ type: "ADD_ITEM", payload: { item } });
+  const removeItem = (id: string) => dispatch({ type: "REMOVE_ITEM", payload: id });
+  const updateQuantity = (id: string, quantity: number) => dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } });
+  const clearCart = () => dispatch({ type: "CLEAR_CART" });
+  const applyCoupon = (code: string, discountAmount: number) => 
+      dispatch({ type: "APPLY_COUPON", payload: { code, discountAmount } });
+  const removeCoupon = () => dispatch({ type: "REMOVE_COUPON" });
+  const applyCoins = (coins: number, discountAmount: number) => dispatch({ type: "APPLY_COINS", payload: { coins, discountAmount } });
+  const removeCoins = () => dispatch({ type: "REMOVE_COINS" });
 
   const itemCount = cart.items.reduce((count, item) => count + item.quantity, 0);
   
@@ -183,6 +292,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removeItem,
     updateQuantity,
     clearCart,
+    applyCoupon,
+    removeCoupon,
+    applyCoins,
+    removeCoins,
     itemCount,
   };
 

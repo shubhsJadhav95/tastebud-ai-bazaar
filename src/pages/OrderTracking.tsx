@@ -1,8 +1,9 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/contexts/AuthContext"; // Import AuthContext
 import { orderService } from "@/services/orderService"; // Import orderService
+import { userService } from "@/services/userService"; // Import userService
 import { Order, OrderItem as OrderItemType, OrderStatus } from "@/types"; // Import Order types
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
@@ -16,6 +17,7 @@ import { format } from 'date-fns'; // For formatting timestamps
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert
 import { AlertCircle } from "lucide-react"; // Import AlertCircle
+import { serverTimestamp } from "firebase/firestore"; // Import serverTimestamp
 
 // Define the statuses matching your OrderStatus type for the progress bar
 const trackingStatuses: { key: OrderStatus; label: string; icon: React.ReactNode; description: string }[] = [
@@ -35,6 +37,7 @@ const OrderTracking: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [donationOpen, setDonationOpen] = useState(false);
+  const navigate = useNavigate(); // Initialize navigate
   // No simulation state needed (currentSimulatedStatus is removed)
 
   useEffect(() => {
@@ -94,9 +97,42 @@ const OrderTracking: React.FC = () => {
 
   // --- Simulation useEffect is REMOVED ---
 
-  const handleDonate = () => {
-    toast.success("Thank you for donating your leftover food to help those in need!");
+  // Modify handleDonate to be async and perform new actions
+  const handleDonate = async () => {
+    if (!user?.uid || !order?.id) {
+        toast.error("Could not process donation. User or Order information missing.");
+        setDonationOpen(false);
+        return;
+    }
+
+    // Close dialog immediately for responsiveness
     setDonationOpen(false);
+    toast.info("Processing your donation..."); // Give feedback
+
+    try {
+        // Perform actions concurrently (or sequentially if needed)
+        // Ensure customer_id is present on the order object
+        if (!order.customer_id) {
+            throw new Error("Customer ID missing from order data.");
+        }
+        
+        await Promise.all([
+            userService.awardSupercoins(user.uid, 100),
+            userService.generateOrRetrieveReferralCode(user.uid),
+            // Correct the function name and pass customerId
+            orderService.updateOrderDetails(order.id, order.customer_id, { didDonate: true, updatedAt: serverTimestamp() })
+        ]);
+
+        toast.success("Thank you for donating! You've earned Supercoins.");
+
+        // Navigate to the new rewards page
+        navigate("/customer/rewards");
+
+    } catch (err) {
+        console.error("Error processing donation actions:", err);
+        toast.error("An error occurred while processing your donation. Please try again.");
+        // Optionally re-open dialog or handle error state
+    }
   };
 
   // --- Loading State ---
