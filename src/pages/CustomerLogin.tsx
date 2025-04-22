@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import * as React from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -55,7 +56,10 @@ const CustomerLogin: React.FC = () => {
     }
     
     if (user && profile?.user_type === "customer") {
-      console.log('REDIRECT EFFECT: Condition MET! Navigating to /customer/home...'); // Added log
+      console.log('REDIRECT EFFECT: Condition MET! Preparing to navigate...'); // Added log
+      console.log('Current User:', user);
+      console.log('Current Profile:', profile);
+      console.log('Navigating to /customer/home...'); // Added log
       navigate("/customer/home");
     } else if (user && profile?.user_type === "restaurant") {
       console.log('REDIRECT EFFECT: Condition MET! Navigating to /restaurant/dashboard...'); // Added log
@@ -74,8 +78,7 @@ const CustomerLogin: React.FC = () => {
   useEffect(() => {
     if (authError) {
       // Use toast or another method to display the error from the context
-      const message = typeof authError === 'string' ? authError : authError.message;
-      toast.error(message || "An authentication error occurred.");
+      toast.error(authError || "An authentication error occurred.");
       // Consider clearing the error in the context if needed after showing it
     }
   }, [authError]);

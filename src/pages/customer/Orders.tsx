@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { orderService } from '@/services/orderService';
 import { Order } from '@/types'; // Assuming Order type is defined in @/types
@@ -18,6 +19,7 @@ const CustomerOrdersPage: React.FC = () => {
   const [restaurantNames, setRestaurantNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user?.uid) {
@@ -101,6 +103,12 @@ const CustomerOrdersPage: React.FC = () => {
     }
   };
 
+  const handleOrderClick = (orderId: string) => {
+    console.log(`Clicked order: ${orderId}, setting localStorage and navigating...`);
+    localStorage.setItem("latestOrderId", orderId);
+    navigate("/cart/order-tracking");
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <h1 className="text-3xl font-bold mb-6">My Orders</h1>
@@ -120,7 +128,11 @@ const CustomerOrdersPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <Card key={order.id}>
+            <Card 
+              key={order.id}
+              onClick={() => handleOrderClick(order.id)}
+              className="cursor-pointer hover:shadow-md transition-shadow duration-200"
+            >
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   <span>{restaurantNames[order.restaurant_id] || 'Loading Restaurant...'}</span>

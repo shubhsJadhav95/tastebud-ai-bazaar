@@ -72,6 +72,7 @@ export interface OrderItem {
   name: string; // Store name at time of order
   quantity: number;
   price: number; // Store price at time of order
+  image_url?: string | null; // Add optional image URL for display
   // Add options/customizations if applicable
 }
 
@@ -94,6 +95,7 @@ export interface Order {
   customerName?: string; // Store for convenience
   customerPhone?: string; // Store for convenience
   paymentMethod?: string; // Added payment method (optional?)
+  didDonate?: boolean; // Flag for meal donation
   createdAt: Timestamp;
   updatedAt?: Timestamp; // Track last status update time
 }

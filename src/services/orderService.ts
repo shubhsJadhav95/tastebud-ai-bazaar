@@ -1,6 +1,7 @@
 import { db } from '@/integrations/firebase/client'; // Corrected import path
 import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError, getDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { Order, OrderStatus } from '@/types'; // Import Order type as well
+import { useAuthContext } from "@/contexts/AuthContext"; // Might be needed if service needs user ID directly
 
 export const orderService = {
   /**
@@ -209,5 +210,49 @@ export const orderService = {
       console.error(`Error fetching order details for ID ${orderId}:`, error);
       return null; // Or throw error depending on desired handling
     }
+  },
+
+  /**
+   * Fetches a single order by its ID and listens for real-time updates 
+   * from the user's specific order subcollection.
+   * @param userId The ID of the customer.
+   * @param orderId The ID of the order to fetch and track.
+   * @param onUpdate Callback function called with the updated Order data.
+   * @param onError Callback function called on error.
+   * @returns An unsubscribe function to stop listening.
+   */
+  getOrderByIdRealtime(
+    userId: string,
+    orderId: string,
+    onUpdate: (order: Order | null) => void,
+    onError: (error: FirestoreError) => void
+  ): Unsubscribe {
+    if (!userId || !orderId) {
+      console.error("User ID and Order ID are required to fetch order details.");
+      onError(new Error("Missing User ID or Order ID") as FirestoreError);
+      return () => {};
+    }
+
+    console.log(`Setting up real-time listener for order ${orderId} for user ${userId}`);
+    const userOrderDocRef = doc(db, 'users', userId, 'orders', orderId);
+
+    const unsubscribe = onSnapshot(userOrderDocRef, 
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const orderData = { id: docSnap.id, ...docSnap.data() } as Order;
+          console.log(`Received update for order ${orderId}:`, orderData);
+          onUpdate(orderData);
+        } else {
+          console.warn(`Order document ${orderId} not found in user ${userId}'s subcollection.`);
+          onUpdate(null); // Explicitly send null if document is deleted or not found
+        }
+      },
+      (error) => {
+        console.error(`Error listening to order ${orderId} for user ${userId}:`, error);
+        onError(error);
+      }
+    );
+
+    return unsubscribe;
   },
 }; 

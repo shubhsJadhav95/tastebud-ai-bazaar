@@ -138,12 +138,15 @@ const Cart: React.FC = () => {
       // 6. Commit the batch
       await batch.commit();
 
+      // Save the new order ID to localStorage for the tracking page
+      localStorage.setItem("latestOrderId", newOrderId);
+
       // 7. Clear cart (local state)
       clearCart();
 
-      // 8. Navigate to the order tracking page (pass the new ID)
+      // 8. Navigate to the new order tracking page path
       toast.success("Order placed successfully!");
-      navigate("/order-tracking");
+      navigate("/dashboard/order-tracking");
 
     } catch (error) {
       console.error("Error placing order in Firestore:", error);
