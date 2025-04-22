@@ -48,6 +48,8 @@ export interface MenuItem {
   price: number; // Assuming price is required
   image_url?: string | null;
   category?: string | null;
+  calories?: number | null; // Added optional calorie count
+  serves?: string | null;   // Added optional serving size (string for ranges like "2-3")
   is_available?: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;

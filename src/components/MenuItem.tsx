@@ -81,7 +81,19 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
             </Dialog>
           </div>
           {/* Description */}
-          <p className="text-gray-500 text-sm line-clamp-2">{item.description || "No description available."}</p>
+          <p className="text-gray-500 text-sm line-clamp-2 mb-1">{item.description || "No description available."}</p>
+          {/* Calories and Serves Info - Added */}
+          <div className="text-xs text-gray-400 flex items-center space-x-2">
+            {item.calories != null && (
+              <span>{item.calories} Cal</span>
+            )}
+            {item.calories != null && item.serves && (
+              <span className="font-bold">·</span> // Separator
+            )}
+            {item.serves && (
+              <span>Serves: {item.serves}</span>
+            )}
+          </div>
         </div>
         {/* Bottom part: Price and Add to Cart */}
         <div className="flex justify-between items-center mt-2">
