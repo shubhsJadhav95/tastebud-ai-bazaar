@@ -12,6 +12,7 @@ export interface UserProfile {
   supercoins?: number; // Current Supercoins balance
   referralCode?: string | null; // Added user's unique referral code
   referredByCode?: string | null; // Added optional: Code user was referred by
+  referralCodeUsed?: boolean; // Has this user already used *someone else's* code?
   totalCoinDiscountClaimed?: number; // Added: Tracks total value claimed via coins
   createdAt?: Timestamp; // Optional or use serverTimestamp() on write
   updatedAt?: Timestamp; // Optional or use serverTimestamp() on write

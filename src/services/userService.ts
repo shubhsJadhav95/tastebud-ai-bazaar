@@ -166,6 +166,64 @@ export const generateOrRetrieveReferralCode = async (userId: string): Promise<st
   }
 };
 
+/**
+ * Validates if a referral code exists for any user.
+ * @param code The referral code entered by the user.
+ * @returns Promise resolving to an object with validity, message, and referrerId.
+ */
+export const validateReferralCode = async (code: string): Promise<{ valid: boolean; referrerId: string | null; message: string }> => {
+  if (!code || typeof code !== 'string' || code.length < 5) { // Basic sanity check
+    return { valid: false, referrerId: null, message: "Invalid code format." };
+  }
+
+  try {
+    const usersRef = collection(db, USER_COLLECTION);
+    // Query for a user where their referralCode field matches the entered code
+    const q = query(usersRef, where("referralCode", "==", code), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      // No user found with this referral code
+      return { valid: false, referrerId: null, message: "Referral code not found." };
+    } else {
+      // Found a user with this code
+      const referrerDoc = querySnapshot.docs[0];
+      return { valid: true, referrerId: referrerDoc.id, message: "Referral code valid." };
+    }
+  } catch (error) {
+    console.error("Error validating referral code:", error);
+    return { valid: false, referrerId: null, message: "Error checking referral code." };
+  }
+};
+
+/**
+ * Marks that a user has successfully used a referral code.
+ * Sets the `referralCodeUsed` flag to true on their profile.
+ * Optionally stores the code they used.
+ * @param userId The ID of the user who used the code.
+ * @param codeUsed The referral code that was used.
+ */
+export const markReferralUsed = async (userId: string, codeUsed: string): Promise<void> => {
+  if (!userId || !codeUsed) {
+    console.error("Invalid userId or codeUsed for marking referral.");
+    // Potentially throw an error here or handle more gracefully
+    return; 
+  }
+  try {
+    const userDocRef = doc(db, USER_COLLECTION, userId);
+    await updateDoc(userDocRef, {
+      referralCodeUsed: true,
+      referredByCode: codeUsed, // Store which code was used (optional)
+      updatedAt: serverTimestamp()
+    });
+    console.log(`Marked referral code ${codeUsed} as used for user ${userId}`);
+  } catch (error) {
+    console.error(`Error marking referral code used for user ${userId}:`, error);
+    // Critical error if this fails after order placement
+    throw new Error("Failed to mark referral code as used."); 
+  }
+};
+
 // Add other user-specific service functions here as needed
 // e.g., update profile, check referral code validity etc.
 
@@ -176,4 +234,6 @@ export const userService = {
   deductSupercoins,
   applyCoinDiscountToUser,
   generateOrRetrieveReferralCode,
+  validateReferralCode,
+  markReferralUsed,
 }; 

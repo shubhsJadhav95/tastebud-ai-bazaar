@@ -21,7 +21,7 @@ import Cart from "./pages/Cart";
 import OrderTracking from "./pages/OrderTracking";
 import RestaurantOrders from "./pages/RestaurantOrders";
 import CustomerOrdersPage from "./pages/customer/Orders";
-import RewardsPage from "./pages/customer/RewardsPage"; // Import the new RewardsPage
+import RewardsPage from "@/pages/customer/RewardsPage";
 import OrderSuccess from "./pages/OrderSuccess"; // Import the OrderSuccess page
 import NotFound from "./pages/NotFound";
 

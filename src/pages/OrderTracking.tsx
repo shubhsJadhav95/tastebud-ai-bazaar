@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert
 import { AlertCircle } from "lucide-react"; // Import AlertCircle
 import { serverTimestamp } from "firebase/firestore"; // Import serverTimestamp
+import RewardsPage from "./pages/customer/RewardsPage"; // Import the new RewardsPage
 
 // Define the statuses matching your OrderStatus type for the progress bar
 const trackingStatuses: { key: OrderStatus; label: string; icon: React.ReactNode; description: string }[] = [
@@ -33,7 +34,7 @@ const activeDisplayStatuses = trackingStatuses.filter(s => s.key !== 'Cancelled'
 
 const OrderTracking: React.FC = () => {
   console.log("OrderTracking component mounted");
-  const { user } = useAuthContext();
+  const { user, authLoading } = useAuthContext();
   const [order, setOrder] = useState<Order | null>(null); // This WILL hold the real-time order
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,17 +43,18 @@ const OrderTracking: React.FC = () => {
   // No simulation state needed (currentSimulatedStatus is removed)
 
   useEffect(() => {
+    if (authLoading) return; // Wait for auth state
+    if (!user?.uid) {
+        toast.error("Please log in to view your rewards.");
+        navigate('/login'); // Redirect to login if not authenticated
+        setLoading(false);
+        return;
+    }
     setLoading(true);
     setError(null);
     setOrder(null); // Clear previous order state on load
 
     const latestOrderId = localStorage.getItem("latestOrderId");
-
-    if (!user?.uid) {
-      setError("Please log in to track orders.");
-      setLoading(false);
-      return;
-    }
 
     if (!latestOrderId) {
       setError("No recent order found to track.");
@@ -94,7 +96,7 @@ const OrderTracking: React.FC = () => {
         unsubscribe();
     }
 
-  }, [user]); // Dependency: run when user context changes
+  }, [user, authLoading, navigate]); // Dependency: run when user context changes
 
   // --- Simulation useEffect is REMOVED ---
 

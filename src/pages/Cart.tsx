@@ -127,32 +127,92 @@ const Cart: React.FC = () => {
       );
   }
 
-  // Updated handler for applying coupons, user's own code, OR using "SUPERCOINS" keyword
+  // Handler for standard coupon codes AND referral codes
   const handleApplyCode = async () => {
     const codeToApply = couponCode.trim().toUpperCase();
     if (!codeToApply) return;
     
     setIsApplyingCode(true);
-    console.log(`Attempting to apply standard coupon: "${codeToApply}"`); 
+    console.log(`Attempting to apply code: "${codeToApply}"`); 
 
+    // --- 0. Check if coins are applied --- 
+    if (cart.appliedCoins > 0) {
+        toast.error("Cannot apply code when Supercoin discount is active.");
+        setIsApplyingCode(false);
+        return;
+    }
+
+    // --- 1. Check standard coupons --- 
+    // IMPORTANT: Replace this with your actual coupon validation logic (API call, etc.)
     const standardCoupons: { [code: string]: number } = {
-        "TASTEBUD10": 50,
-        "WELCOME50": cart.subtotal * 0.5,
+        "TASTEBUD10": 50, 
+        "WELCOME50": cart.subtotal * 0.5, 
     };
 
     if (standardCoupons[codeToApply] !== undefined) {
+        console.log(`Code "${codeToApply}" matches standard coupon.`);
         const discountAmount = standardCoupons[codeToApply];
         const actualDiscount = Math.min(cart.subtotal, discountAmount);
         
         if (actualDiscount > 0) {
-            applyCoupon(codeToApply, actualDiscount);
+            applyCoupon(codeToApply, actualDiscount, false); // isReferral: false
             setCouponCode("");
             toast.success(`Coupon ${codeToApply} applied!`);
         } else {
             toast.info("Coupon value is zero or cart is empty.");
         }
-    } else {
-        toast.error(`Invalid coupon code: ${codeToApply}`);
+        setIsApplyingCode(false);
+        return; // Exit after handling standard coupon
+    }
+
+    // --- 2. If not a standard coupon, check if it's a referral code --- 
+    console.log(`Code "${codeToApply}" is not a standard coupon, checking as referral...`);
+    
+    // Ensure user is logged in and profile is loaded
+    if (!user || !currentProfile) {
+      toast.error("Please log in to use a referral code.");
+      setIsApplyingCode(false);
+      return;
+    }
+
+    // Check if user has already used a referral code
+    if (currentProfile.referralCodeUsed) {
+        toast.error("You have already used a referral code.");
+        setIsApplyingCode(false);
+        return;
+    }
+
+    try {
+        const validationResult = await userService.validateReferralCode(codeToApply);
+        console.log("Referral validation result:", validationResult);
+
+        if (validationResult.valid && validationResult.referrerId) {
+            // Check if user is trying to use their own code
+            if (validationResult.referrerId === user.uid) {
+                toast.error("You cannot use your own referral code.");
+                setIsApplyingCode(false);
+                return;
+            }
+
+            // Valid referral code belonging to someone else, and user hasn't used one
+            const discountAmount = cart.subtotal * 0.10; // 10% discount
+            const actualDiscount = Math.min(cart.subtotal, discountAmount);
+
+            if (actualDiscount > 0) {
+                applyCoupon(codeToApply, actualDiscount, true); // isReferral: true
+                setCouponCode("");
+                toast.success(`Referral code ${codeToApply} applied for 10% off!`);
+            } else {
+                toast.info("Referral discount is zero as cart is empty.");
+            }
+
+        } else {
+            // Invalid referral code
+            toast.error(validationResult.message || "Invalid referral code.");
+        }
+    } catch (err) {
+        console.error("Error validating referral code:", err);
+        toast.error("Could not validate referral code. Please try again.");
     }
 
     setIsApplyingCode(false);
@@ -196,7 +256,7 @@ const Cart: React.FC = () => {
       toast.info("Supercoin discount removed.");
   };
 
-  // --- Checkout Handler (No changes needed here for this logic) --- 
+  // --- Checkout Handler (Update post-order actions) --- 
   const handleCheckout = async () => {
     if (!user) {
       toast.error("Please log in to place an order.");
@@ -266,7 +326,7 @@ const Cart: React.FC = () => {
       // 1. Apply Coin Discount to User Profile (if coins were manually applied)
       if (cart.appliedCoins > 0 && cart.coinDiscountAmount > 0) { 
           postOrderPromises.push(
-              userService.applyCoinDiscountToUser(user!.uid, cart.appliedCoins, cart.coinDiscountAmount)
+              userService.applyCoinDiscountToUser(user.uid, cart.appliedCoins, cart.coinDiscountAmount)
                 .then(() => toast.info(`${cart.appliedCoins} Supercoins used for discount.`))
                 .catch(err => {
                      console.error("CRITICAL: Failed to apply coin discount to user profile:", err);
@@ -274,12 +334,25 @@ const Cart: React.FC = () => {
                 })
           );
       } 
+
+      // 2. Mark Referral Code Used (if referral discount was applied)
+      if (cart.isReferralDiscount && cart.appliedCouponCode && user) {
+           console.log(`Attempting to mark referral code ${cart.appliedCouponCode} as used for user ${user.uid}`);
+           postOrderPromises.push(
+                userService.markReferralUsed(user.uid, cart.appliedCouponCode)
+                    .then(() => console.log(`Successfully marked referral code ${cart.appliedCouponCode} as used.`))
+                    .catch(err => {
+                        // Log critical error - failure here means user might reuse code
+                        console.error(`CRITICAL: Failed to mark referral code ${cart.appliedCouponCode} used for user ${user.uid}:`, err);
+                        toast.error("CRITICAL: Failed to update referral usage status! Please contact support.");
+                    })
+            );
+      }
       
       await Promise.all(postOrderPromises);
       clearCart();
-      // Navigate to the new success page, passing the order ID in state
-      console.log(`NAVIGATING to /order-success with orderId: ${newOrderId}`);
-      navigate("/order-success", { state: { orderId: newOrderId } });
+      console.log(`NAVIGATING to /order-success with orderId: ${newOrderId}`); 
+      navigate("/order-success", { state: { orderId: newOrderId } }); // Correct path
 
     } catch (error) {
       console.error("Error placing order in Firestore:", error);
@@ -498,14 +571,15 @@ const Cart: React.FC = () => {
               {/* --- Coupon Code Section --- */}
               <div className="border-b pb-3">
                   <h3 className="text-sm font-medium mb-2 flex items-center">
-                      <Tag size={16} className="mr-2 text-blue-500"/> Coupon Code
+                      <Tag size={16} className="mr-2 text-blue-500"/> Coupon / Referral Code
                   </h3>
                   
-                  {/* Display applied Coupon */} 
+                  {/* Display applied Coupon (could be standard or referral) */} 
                   {cart.appliedCouponCode ? (
                       <div className="flex justify-between items-center text-sm bg-green-50 p-2 rounded border border-green-200 mb-2">
                            <span className="text-green-700 font-medium">
-                              Code "{cart.appliedCouponCode}" Applied! (-₹{cart.couponDiscountAmount.toFixed(2)})
+                              {/* Distinguish display based on type */} 
+                              {cart.isReferralDiscount ? 'Referral ' : 'Coupon '}Code "{cart.appliedCouponCode}" Applied! (-₹{cart.couponDiscountAmount.toFixed(2)})
                            </span>
                            <button onClick={handleRemoveCoupon} className="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>
                       </div>
@@ -515,11 +589,11 @@ const Cart: React.FC = () => {
                          <div className="flex space-x-2"> 
                            <input
                                type="text"
-                               placeholder="Enter coupon code"
+                               placeholder="Enter coupon or referral code"
                                className="input-field flex-grow text-sm py-1.5"
                                value={couponCode}
                                onChange={(e) => setCouponCode(e.target.value)}
-                               disabled={isApplyingCode || cart.appliedCoins > 0}
+                               disabled={isApplyingCode || cart.appliedCoins > 0} // Disable if applying or coins applied
                            />
                            <button 
                                onClick={handleApplyCode}
@@ -544,10 +618,11 @@ const Cart: React.FC = () => {
                 <div className="flex justify-between"><span className="text-gray-600">Delivery Fee</span><span><IndianRupee size={12} className="inline mr-0.5"/>{deliveryFee.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span className="text-gray-600">Taxes (5%)</span><span><IndianRupee size={12} className="inline mr-0.5"/>{tax.toFixed(2)}</span></div>
                 
-                {/* Display Coupon Discount if applied */} 
+                {/* Display Coupon Discount if applied */}
                 {couponDiscount > 0 && cart.appliedCouponCode && (
                   <div className="flex justify-between text-green-600">
-                      <span>Coupon Discount ({cart.appliedCouponCode})</span>
+                      {/* Distinguish label */} 
+                      <span>{cart.isReferralDiscount ? 'Referral ' : 'Coupon '}Discount ({cart.appliedCouponCode})</span>
                       <span>-<IndianRupee size={12} className="inline mr-0.5"/>{couponDiscount.toFixed(2)}</span>
                   </div>
                 )}

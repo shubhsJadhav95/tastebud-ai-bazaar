@@ -28,6 +28,7 @@ interface CartState {
   subtotal: number;
   appliedCouponCode: string | null;
   couponDiscountAmount: number;
+  isReferralDiscount: boolean;
   // Coin state
   appliedCoins: number; // How many coins are currently applied (due to auto-apply)
   coinDiscountAmount: number; // Discount amount from applied coins
@@ -40,7 +41,7 @@ type CartAction =
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
   | { type: "CLEAR_CART" }
-  | { type: "APPLY_COUPON"; payload: { code: string; discountAmount: number } }
+  | { type: "APPLY_COUPON"; payload: { code: string; discountAmount: number; isReferral?: boolean } }
   | { type: "REMOVE_COUPON" }
   | { type: "APPLY_COINS"; payload: { coins: number; discountAmount: number } }
   | { type: "REMOVE_COINS" };
@@ -51,7 +52,7 @@ interface CartContextType {
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
-  applyCoupon: (code: string, discountAmount: number) => void;
+  applyCoupon: (code: string, discountAmount: number, isReferral?: boolean) => void;
   removeCoupon: () => void;
   applyCoins: (coins: number, discountAmount: number) => void;
   removeCoins: () => void;
@@ -66,6 +67,7 @@ const initialState: CartState = {
   subtotal: 0,
   appliedCouponCode: null,
   couponDiscountAmount: 0,
+  isReferralDiscount: false,
   appliedCoins: 0,
   coinDiscountAmount: 0,
   totalAmount: 0,
@@ -160,13 +162,14 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     }
 
     case "APPLY_COUPON": {
-        const { code, discountAmount } = action.payload;
+        const { code, discountAmount, isReferral = false } = action.payload;
         const tempSubtotal = calculateSubtotal(state.items); // Use current items for subtotal
         const actualDiscount = Math.min(tempSubtotal, discountAmount);
         
         // Applying a coupon removes coin discount
         newState.appliedCouponCode = code;
         newState.couponDiscountAmount = actualDiscount;
+        newState.isReferralDiscount = isReferral;
         newState.appliedCoins = 0; 
         newState.coinDiscountAmount = 0;
         newState.subtotal = tempSubtotal; // Update subtotal explicitly here
@@ -176,6 +179,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     case "REMOVE_COUPON": {
         newState.appliedCouponCode = null;
         newState.couponDiscountAmount = 0;
+        newState.isReferralDiscount = false;
         // Recalculate totals below (no auto coin logic anymore)
         break;
     }
@@ -189,6 +193,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
          newState.coinDiscountAmount = actualDiscount;
          newState.appliedCouponCode = null;
          newState.couponDiscountAmount = 0;
+         newState.isReferralDiscount = false;
          newState.subtotal = tempSubtotal;
          newState.totalAmount = calculateFinalTotal(tempSubtotal, 0, actualDiscount);
          return newState;
@@ -278,8 +283,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const removeItem = (id: string) => dispatch({ type: "REMOVE_ITEM", payload: id });
   const updateQuantity = (id: string, quantity: number) => dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } });
   const clearCart = () => dispatch({ type: "CLEAR_CART" });
-  const applyCoupon = (code: string, discountAmount: number) => 
-      dispatch({ type: "APPLY_COUPON", payload: { code, discountAmount } });
+  const applyCoupon = (code: string, discountAmount: number, isReferral?: boolean) => 
+      dispatch({ type: "APPLY_COUPON", payload: { code, discountAmount, isReferral } });
   const removeCoupon = () => dispatch({ type: "REMOVE_COUPON" });
   const applyCoins = (coins: number, discountAmount: number) => dispatch({ type: "APPLY_COINS", payload: { coins, discountAmount } });
   const removeCoins = () => dispatch({ type: "REMOVE_COINS" });
