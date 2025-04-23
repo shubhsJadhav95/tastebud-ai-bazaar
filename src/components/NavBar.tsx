@@ -13,7 +13,8 @@ import {
   UtensilsCrossed, 
   History, 
   Settings,
-  UserCircle
+  UserCircle,
+  Utensils
 } from "lucide-react";
 
 const NavBar: React.FC = () => {
@@ -48,7 +49,8 @@ const NavBar: React.FC = () => {
               to={userType === "customer" ? "/customer/home" : userType === "restaurant" ? "/restaurant/dashboard" : "/"} 
               className="flex items-center"
             >
-              <span className="text-food-primary text-2xl font-bold">Tastebud AI</span>
+              <Utensils className="h-7 w-7 text-food-primary" />
+              <span className="text-food-primary text-2xl font-bold">Swadisht</span>
             </Link>
           </div>
 

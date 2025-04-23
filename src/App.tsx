@@ -33,6 +33,10 @@ import RestaurantManagePage from "./pages/dashboard/restaurants/RestaurantManage
 import RestaurantOrdersPage from "./pages/dashboard/orders/RestaurantOrdersPage";
 import OrderDetailPage from "./pages/dashboard/orders/OrderDetailPage"; // Import the new detail page
 import DashboardOrderSuccessPage from "./pages/dashboard/OrderSuccessPage"; // Import dashboard success page
+// Import the new donation history page
+import DonationHistoryPage from "./pages/dashboard/donations/DonationHistoryPage"; 
+// Import the new NGO management page
+import ManageNGOsPage from "./pages/dashboard/ngos/ManageNGOsPage";
 
 const queryClient = new QueryClient();
 
@@ -62,9 +66,14 @@ const App = () => (
               <Route path="/order-success" element={<OrderSuccess />} />
 
               {/* --- New Restaurant Dashboard Routes --- */}
+              {/* NGO Management Route */}
+              <Route path="/dashboard/ngos" element={<ManageNGOsPage />} /> 
+              {/* Restaurant Management Routes */}
               <Route path="/dashboard/restaurants" element={<RestaurantListPage />} />
               <Route path="/dashboard/restaurants/new" element={<RestaurantCreatePage />} />
               <Route path="/dashboard/restaurants/:restaurantId" element={<RestaurantManagePage />} />
+              {/* Add Donation History route */}
+              <Route path="/dashboard/restaurants/:restaurantId/donations" element={<DonationHistoryPage />} />
               {/* Order Management Routes */}
               <Route path="/dashboard/orders" element={<RestaurantOrdersPage />} /> 
               <Route path="/dashboard/orders/:orderId" element={<OrderDetailPage />} /> {/* Add route for order details */}

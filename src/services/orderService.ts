@@ -2,6 +2,7 @@ import { db } from '@/integrations/firebase/client'; // Corrected import path
 import { doc, updateDoc, Timestamp, collection, query, where, orderBy, onSnapshot, Unsubscribe, FirestoreError, getDoc, writeBatch, getDocs, serverTimestamp, FieldValue } from 'firebase/firestore';
 import { Order, OrderStatus, OrderItem } from '@/types'; // Import Order type as well
 import { useAuthContext } from "@/contexts/AuthContext"; // Might be needed if service needs user ID directly
+import { restaurantService } from './restaurantService'; // Import restaurantService to get restaurant IDs
 
 export const orderService = {
   /**
@@ -291,5 +292,101 @@ export const orderService = {
     );
 
     return unsubscribe;
+  },
+
+  /**
+   * Fetches all orders for a specific restaurant that have been marked as donated.
+   * @param restaurantId The ID of the restaurant.
+   * @returns A promise resolving to an array of donated Order objects.
+   */
+  async getDonatedOrdersByRestaurant(restaurantId: string): Promise<Order[]> {
+    if (!restaurantId) {
+      console.error("Restaurant ID required for fetching donated orders.");
+      throw new Error("Restaurant ID is required.");
+    }
+    try {
+      console.log(`[getDonatedOrdersByRestaurant] Fetching donated orders for restaurant ${restaurantId}`);
+      
+      const ordersRef = collection(db, 'orders');
+      const q = query(
+        ordersRef,
+        where('restaurant_id', '==', restaurantId),
+        where('didDonate', '==', true),
+        orderBy('createdAt', 'desc') // Show most recent donations first
+      );
+
+      const querySnapshot = await getDocs(q);
+      console.log(`[getDonatedOrdersByRestaurant] Query returned ${querySnapshot.size} donated orders.`);
+      
+      const donatedOrders: Order[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      
+      return donatedOrders;
+
+    } catch (error) {
+      console.error(`[getDonatedOrdersByRestaurant] Error fetching donated orders for ${restaurantId}:`, error);
+      throw new Error('Failed to fetch donated orders.'); // Re-throw for the component to catch
+    }
+  },
+
+  /**
+   * Fetches all donated orders across all restaurants owned by a specific user.
+   * @param ownerId The ID of the restaurant owner.
+   * @returns A promise resolving to an array of donated Order objects.
+   */
+  async getAllDonatedOrdersByOwner(ownerId: string): Promise<Order[]> {
+    if (!ownerId) {
+      console.error("Owner ID required for fetching all donated orders.");
+      throw new Error("Owner ID is required.");
+    }
+
+    try {
+      // 1. Get restaurants owned by the user
+      const ownedRestaurants = await restaurantService.getRestaurantsByOwner(ownerId);
+      if (ownedRestaurants.length === 0) {
+        console.log(`[getAllDonatedOrdersByOwner] Owner ${ownerId} has no restaurants.`);
+        return []; // No restaurants, so no orders
+      }
+
+      const restaurantIds = ownedRestaurants.map(r => r.id);
+      console.log(`[getAllDonatedOrdersByOwner] Found ${restaurantIds.length} restaurants for owner ${ownerId}.`);
+
+      // 2. Handle Firestore 'in' query limit (max 30 values)
+      if (restaurantIds.length > 30) {
+        console.warn(`[getAllDonatedOrdersByOwner] Owner ${ownerId} has more than 30 restaurants (${restaurantIds.length}). Querying only the first 30.`);
+        // Consider implementing multiple queries or alternative approach for > 30 restaurants
+        restaurantIds.splice(30); // Query only the first 30 for now
+      }
+
+      // 3. Query donated orders for these restaurants
+      const ordersRef = collection(db, 'orders');
+      const q = query(
+        ordersRef,
+        where('restaurant_id', 'in', restaurantIds),
+        where('didDonate', '==', true),
+        orderBy('createdAt', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      console.log(`[getAllDonatedOrdersByOwner] Query returned ${querySnapshot.size} total donated orders.`);
+
+      const allDonatedOrders: Order[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Order[];
+
+      return allDonatedOrders;
+
+    } catch (error) {
+      console.error(`[getAllDonatedOrdersByOwner] Error fetching orders for owner ${ownerId}:`, error);
+      // Check if the error is specifically the index required error
+      if (error instanceof Error && error.message.includes('requires an index')) {
+         console.error("Firestore composite index required for getAllDonatedOrdersByOwner query. Please create it in the Firebase console.");
+         // Potentially provide the index creation link format if possible, although Firebase usually does this
+      }
+      throw new Error('Failed to fetch all donated orders.'); // Re-throw
+    }
   },
 }; 

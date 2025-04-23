@@ -4,11 +4,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/contexts/AuthContext"; // Import AuthContext
 import { orderService } from "@/services/orderService"; // Import orderService
 import { userService } from "@/services/userService"; // Import userService
+import { ngoService, NGO } from "@/services/ngoService"; // Import NGO service and type
 import { Order, OrderItem as OrderItemType, OrderStatus } from "@/types"; // Import Order types
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import OrderItem from "../components/OrderItem";
-import { Check, Clock, Utensils, Truck, Gift, MapPin, IndianRupee, ShoppingBag, Package, CheckCircle, Heart } from "lucide-react"; // Added more icons
+import { Check, Clock, Utensils, Truck, Gift, MapPin, IndianRupee, ShoppingBag, Package, CheckCircle, Heart, Loader2 } from "lucide-react"; // Added more icons and Loader2
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { format } from 'date-fns'; // For formatting timestamps
@@ -18,7 +19,10 @@ import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert
 import { AlertCircle } from "lucide-react"; // Import AlertCircle
 import { serverTimestamp } from "firebase/firestore"; // Import serverTimestamp
-import RewardsPage from "./pages/customer/RewardsPage"; // Import the new RewardsPage
+// import RewardsPage from "./pages/customer/RewardsPage"; // Remove this incorrect import
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button"; // Import Button
 
 // Define the statuses matching your OrderStatus type for the progress bar
 const trackingStatuses: { key: OrderStatus; label: string; icon: React.ReactNode; description: string }[] = [
@@ -34,13 +38,16 @@ const activeDisplayStatuses = trackingStatuses.filter(s => s.key !== 'Cancelled'
 
 const OrderTracking: React.FC = () => {
   console.log("OrderTracking component mounted");
-  const { user, authLoading } = useAuthContext();
+  const { user, loading: authLoading } = useAuthContext();
   const [order, setOrder] = useState<Order | null>(null); // This WILL hold the real-time order
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [donationOpen, setDonationOpen] = useState(false);
   const navigate = useNavigate(); // Initialize navigate
-  // No simulation state needed (currentSimulatedStatus is removed)
+  const [availableNgos, setAvailableNgos] = useState<NGO[]>([]);
+  const [selectedNgoId, setSelectedNgoId] = useState<string | null>(null);
+  const [loadingNgos, setLoadingNgos] = useState(false);
+  const [ngoError, setNgoError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return; // Wait for auth state
@@ -98,7 +105,29 @@ const OrderTracking: React.FC = () => {
 
   }, [user, authLoading, navigate]); // Dependency: run when user context changes
 
-  // --- Simulation useEffect is REMOVED ---
+  // Effect for fetching NGOs when donation dialog opens
+  useEffect(() => {
+    if (donationOpen) {
+      console.log("Donation dialog opened, fetching NGOs...");
+      setLoadingNgos(true);
+      setNgoError(null);
+      setSelectedNgoId(null); // Reset selection when dialog opens
+      
+      ngoService.getAllNGOs()
+        .then(ngos => {
+          setAvailableNgos(ngos);
+          console.log("Fetched NGOs:", ngos);
+        })
+        .catch(err => {
+          console.error("Error fetching NGOs:", err);
+          setNgoError("Could not load list of NGOs. Please try again later.");
+          setAvailableNgos([]); // Clear any previous list
+        })
+        .finally(() => {
+          setLoadingNgos(false);
+        });
+    }
+  }, [donationOpen]); // Rerun when donationOpen changes
 
   // Modify handleDonate to be async and perform new actions
   const handleDonate = async () => {
@@ -107,10 +136,13 @@ const OrderTracking: React.FC = () => {
         setDonationOpen(false);
         return;
     }
+    if (!selectedNgoId) { // Check if an NGO is selected
+        toast.error("Please select an NGO to donate to.");
+        return;
+    }
 
-    // Close dialog immediately for responsiveness
-    setDonationOpen(false);
-    toast.info("Processing your donation..."); // Give feedback
+    setDonationOpen(false); // Close dialog immediately
+    toast.info("Processing your donation...");
 
     try {
         // Perform actions concurrently (or sequentially if needed)
@@ -122,8 +154,12 @@ const OrderTracking: React.FC = () => {
         await Promise.all([
             userService.awardSupercoins(user.uid, 100),
             userService.generateOrRetrieveReferralCode(user.uid),
-            // Correct the function name and pass customerId
-            orderService.updateOrderDetails(order.id, order.customer_id, { didDonate: true, updatedAt: serverTimestamp() })
+            // Update order details including the selected NGO ID
+            orderService.updateOrderDetails(order.id, order.customer_id, { 
+                didDonate: true, 
+                donatedToNgoId: selectedNgoId, // Add selected NGO ID
+                updatedAt: serverTimestamp() 
+            })
         ]);
 
         toast.success("Thank you for donating! You've earned Supercoins.");
@@ -132,6 +168,8 @@ const OrderTracking: React.FC = () => {
         console.error("Error processing donation actions:", err);
         toast.error("An error occurred while processing your donation. Please try again.");
         // Optionally re-open dialog or handle error state
+    } finally {
+        setSelectedNgoId(null); // Reset selection after attempt
     }
   };
 
@@ -259,10 +297,11 @@ const OrderTracking: React.FC = () => {
            {order.status === "Delivered" && order.didDonate && (
              <div className="mt-6 p-4 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 flex items-center animate-fade-in">
                 <Heart size={20} className="mr-3 flex-shrink-0"/>
+                {/* TODO: Enhance this message later to show NGO name if order.donatedToNgoId exists */}
                 <p className="text-sm font-medium">Thank you for donating a meal!</p>
              </div>
            )}
-           {order.status === "Delivered" && !order.didDonate && !donationOpen && ( // Show donation prompt only if not donated
+           {order.status === "Delivered" && !order.didDonate && ( // Show donation prompt only if not donated
             <div className="mt-8 p-4 bg-green-50 rounded-lg border border-green-200 animate-fade-in">
               <div className="flex items-start">
                 <div className="bg-green-500 text-white p-2 rounded-full mr-4"><Gift size={20} /></div>
@@ -345,14 +384,56 @@ const OrderTracking: React.FC = () => {
 
       </div>
 
-      {/* Donation Dialog remains the same */}
+      {/* MODIFIED Donation Dialog */}
       <Dialog open={donationOpen} onOpenChange={setDonationOpen}>
-          {/* ... Dialog Content ... */}
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader><DialogTitle>Donate Leftover Food</DialogTitle><DialogDescription>...</DialogDescription></DialogHeader>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Donate Leftover Food</DialogTitle>
+                <DialogDescription>Choose an NGO to donate this order's value to. Thank you!</DialogDescription>
+            </DialogHeader>
             <div className="py-4">
-              <p>...</p>
-              <button type="button" className="btn-primary w-full" onClick={handleDonate}>Confirm Donation</button>
+                {loadingNgos ? (
+                    <div className="flex items-center justify-center space-x-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Loading NGOs...</span>
+                    </div>
+                ) : ngoError ? (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error Loading NGOs</AlertTitle>
+                        <AlertDescription>{ngoError}</AlertDescription>
+                    </Alert>
+                ) : availableNgos.length === 0 ? (
+                    <p className="text-center text-sm text-gray-500">No NGOs available for donation at this time.</p>
+                ) : (
+                    <RadioGroup 
+                        value={selectedNgoId ?? undefined} 
+                        onValueChange={setSelectedNgoId} 
+                        className="space-y-3"
+                    >
+                        <p className="text-sm font-medium mb-2">Select an NGO:</p>
+                        {availableNgos.map((ngo) => (
+                            <div key={ngo.id} className="flex items-center space-x-3 border rounded-md p-3 hover:bg-gray-50">
+                                <RadioGroupItem value={ngo.id!} id={`ngo-${ngo.id}`} />
+                                <Label htmlFor={`ngo-${ngo.id}`} className="flex flex-col cursor-pointer">
+                                    <span className="font-semibold">{ngo.name}</span>
+                                    <span className="text-xs text-gray-500">{ngo.category} - {ngo.address.city}, {ngo.address.state}</span>
+                                </Label>
+                            </div>
+                        ))}
+                    </RadioGroup>
+                )}
+            </div>
+            <div className="pt-4 border-t">
+                 {/* Use Shadcn Button component */}
+                <Button 
+                    type="button" 
+                    className="w-full" 
+                    onClick={handleDonate} 
+                    disabled={loadingNgos || !selectedNgoId || availableNgos.length === 0}
+                >
+                    Confirm Donation to Selected NGO
+                </Button>
             </div>
           </DialogContent>
       </Dialog>

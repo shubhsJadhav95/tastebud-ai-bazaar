@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, FieldValue } from 'firebase/firestore';
 
 // User profile stored in /users/{userId}
 export interface UserProfile {
@@ -60,7 +60,14 @@ export interface MenuItem {
   updatedAt?: Timestamp;
 }
 
-// Add other shared types for your application (e.g., Order, CartItem) here
+// Define a simple Address type (if not already defined elsewhere)
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  notes?: string; // Optional notes
+}
 
 // Define possible order statuses
 export type OrderStatus = 
@@ -85,26 +92,26 @@ export interface OrderItem {
 
 // Interface for Order data stored in /orders/{orderId}
 export interface Order {
-  id: string; // Firestore document ID
-  restaurant_id: string; // ID of the restaurant fulfilling the order
-  customer_id: string; // ID of the customer placing the order
-  items: OrderItem[]; // Array of items in the order
-  totalAmount: number; // Total cost of the order
-  status: OrderStatus; // Current status of the order
-  orderNumber?: string | number; // Optional user-friendly order number
-  deliveryAddress?: { // Optional: Only if delivery is supported
-    street: string;
-    city: string;
-    state: string;
-    zip: string;
-    notes?: string;
-  };
-  customerName?: string; // Store for convenience
-  customerPhone?: string; // Store for convenience
-  paymentMethod?: string; // Added payment method (optional?)
-  didDonate?: boolean; // Flag for meal donation
-  createdAt: Timestamp;
-  updatedAt?: Timestamp; // Track last status update time
+  id: string;
+  customer_id: string;
+  restaurant_id: string;
+  restaurantName?: string; // Optional: denormalized for easier display
+  items: OrderItem[];
+  totalAmount: number;
+  status: OrderStatus;
+  deliveryAddress: Address; // Uses the defined Address type
+  paymentMethod: string; // e.g., 'card', 'cod'
+  createdAt: Timestamp | Date; // Firestore Timestamp or JS Date
+  updatedAt: Timestamp | Date | FieldValue; // Allows FieldValue for server updates
+  // Optional fields
+  specialInstructions?: string;
+  estimatedDeliveryTime?: Timestamp;
+  deliveryFee?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  didDonate?: boolean; // Flag if customer donated this order
+  donatedToNgoId?: string; // Optional: ID of the NGO selected for donation
+  referralCodeUsed?: string; // Optional: If a referral code was applied
 }
 
 // Add other shared types here as needed, e.g.:

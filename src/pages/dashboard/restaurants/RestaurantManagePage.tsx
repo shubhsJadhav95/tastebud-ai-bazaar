@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // Added useNavigate
+import { useParams, useNavigate, Link } from 'react-router-dom'; // Added useNavigate and Link
 import { restaurantService } from '@/services/restaurantService'; // Corrected path alias if needed
 import { Restaurant } from '@/types'; // Adjust path if needed
 import MenuManager from '@/components/dashboard/MenuManager'; // Using correct alias path
@@ -11,6 +11,7 @@ import { AlertCircle } from 'lucide-react'; // For error display
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button'; // For potential back button
+import { Gift } from 'lucide-react'; // Import an icon for the donations button if desired
 
 const RestaurantManagePage: React.FC = () => {
   const { restaurantId } = useParams<{ restaurantId: string }>();
@@ -169,9 +170,17 @@ const RestaurantManagePage: React.FC = () => {
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <h1 className="text-2xl md:text-3xl font-bold">Manage: {restaurant.name}</h1>
-        <Button variant="outline" onClick={() => navigate('/dashboard/restaurants')}>Back to List</Button>
+        <div className="flex gap-2">
+           {/* Link to Donation History Page */}
+           <Link to={`/dashboard/restaurants/${restaurantId}/donations`}>
+              <Button variant="outline">
+                 <Gift size={16} className="mr-2"/> View Donation History
+              </Button>
+           </Link>
+           <Button variant="outline" onClick={() => navigate('/dashboard/restaurants')}>Back to List</Button>
+        </div>
       </div>
 
       <RestaurantForm

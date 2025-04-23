@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useRestaurantsByOwner } from '@/hooks/useRestaurantsByOwner';
 import NavBar from '@/components/NavBar';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Utensils, Building } from 'lucide-react';
+import { AlertCircle, Utensils, Building, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 const RestaurantSelect: React.FC = () => {
@@ -57,7 +57,12 @@ const RestaurantSelect: React.FC = () => {
       <div className="flex-grow container mx-auto py-8 px-4">
         <header className="mb-8 text-center">
           <h1 className="text-3xl font-bold">Select Your Restaurant</h1>
-          <p className="text-gray-600">Choose which restaurant you want to manage.</p>
+          <p className="text-gray-600 mb-4">Choose which restaurant you want to manage.</p>
+          <Link to="/dashboard/ngos">
+            <Button variant="secondary">
+                <Users size={16} className="mr-2"/> Manage Partner NGOs
+            </Button>
+          </Link>
         </header>
 
         {isLoading ? (
