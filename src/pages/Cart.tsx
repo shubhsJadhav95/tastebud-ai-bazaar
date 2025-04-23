@@ -287,6 +287,7 @@ const Cart: React.FC = () => {
         name: item.name,
         quantity: item.quantity,
         price: item.price,
+        image_url: item.image_url || null
       })) as OrderItemType[],
       subtotal: cart.subtotal,
       couponCode: cart.appliedCouponCode,
