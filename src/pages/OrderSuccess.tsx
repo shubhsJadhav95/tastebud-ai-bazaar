@@ -5,6 +5,7 @@ import NavBar from '../components/NavBar';
 import Footer from '../components/Footer';
 
 const OrderSuccess: React.FC = () => {
+  console.log("OrderSuccess component mounted");
   const location = useLocation();
   const navigate = useNavigate();
   const orderId = location.state?.orderId as string | undefined;

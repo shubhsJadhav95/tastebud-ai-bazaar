@@ -22,6 +22,7 @@ import OrderTracking from "./pages/OrderTracking";
 import RestaurantOrders from "./pages/RestaurantOrders";
 import CustomerOrdersPage from "./pages/customer/Orders";
 import RewardsPage from "./pages/customer/RewardsPage"; // Import the new RewardsPage
+import OrderSuccess from "./pages/OrderSuccess"; // Import the OrderSuccess page
 import NotFound from "./pages/NotFound";
 
 // Import the new restaurant dashboard pages
@@ -31,6 +32,7 @@ import RestaurantManagePage from "./pages/dashboard/restaurants/RestaurantManage
 // Import the new orders page
 import RestaurantOrdersPage from "./pages/dashboard/orders/RestaurantOrdersPage";
 import OrderDetailPage from "./pages/dashboard/orders/OrderDetailPage"; // Import the new detail page
+import DashboardOrderSuccessPage from "./pages/dashboard/OrderSuccessPage"; // Import dashboard success page
 
 const queryClient = new QueryClient();
 
@@ -57,6 +59,7 @@ const App = () => (
               {/* <Route path="/restaurant/orders" element={<RestaurantOrders />} /> */}
               <Route path="/cart" element={<Cart />} />
               <Route path="/cart/order-tracking" element={<OrderTracking />} />
+              <Route path="/order-success" element={<OrderSuccess />} />
 
               {/* --- New Restaurant Dashboard Routes --- */}
               <Route path="/dashboard/restaurants" element={<RestaurantListPage />} />
@@ -65,6 +68,7 @@ const App = () => (
               {/* Order Management Routes */}
               <Route path="/dashboard/orders" element={<RestaurantOrdersPage />} /> 
               <Route path="/dashboard/orders/:orderId" element={<OrderDetailPage />} /> {/* Add route for order details */}
+              <Route path="/dashboard/ordersuccess" element={<DashboardOrderSuccessPage />} /> {/* Add route for dashboard success */}
               {/* --- End New Routes --- */}
 
               <Route path="*" element={<NotFound />} />

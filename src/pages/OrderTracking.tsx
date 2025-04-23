@@ -32,6 +32,7 @@ const trackingStatuses: { key: OrderStatus; label: string; icon: React.ReactNode
 const activeDisplayStatuses = trackingStatuses.filter(s => s.key !== 'Cancelled' && s.key !== 'Failed');
 
 const OrderTracking: React.FC = () => {
+  console.log("OrderTracking component mounted");
   const { user } = useAuthContext();
   const [order, setOrder] = useState<Order | null>(null); // This WILL hold the real-time order
   const [loading, setLoading] = useState<boolean>(true);

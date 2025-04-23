@@ -1,17 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import OrderItem from "../components/OrderItem";
 import { useCart } from "../context/CartContext";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { userService } from "@/services/userService";
 import { toast } from "sonner";
-import { offers } from "../utils/mockData";
-import { ShoppingBag, Truck, CreditCard, Tag, X, IndianRupee } from "lucide-react";
+import { ShoppingBag, Truck, CreditCard, Tag, X, IndianRupee, Gift, Coins, Loader2, User, Phone } from "lucide-react";
 import { useIsMobile } from "../hooks/use-mobile";
 import { db } from "@/integrations/firebase/client";
-import { collection, doc, writeBatch, serverTimestamp, FieldValue } from "firebase/firestore";
-import { Order, OrderItem as OrderItemType, OrderStatus } from "@/types";
+import { collection, doc, writeBatch, serverTimestamp, FieldValue, query, where, getDocs, limit } from "firebase/firestore";
+import { Order, OrderItem as OrderItemType, OrderStatus, UserProfile } from "@/types";
 
 // Define a type for the data being written, allowing serverTimestamp for createdAt
 // Explicitly define the type again to ensure correctness
@@ -19,47 +19,134 @@ type NewOrderData = Omit<Order, 'id' | 'createdAt'> & {
   createdAt: FieldValue 
 };
 
+// --- Tiered Discount Logic ---
+interface DiscountTier {
+  coinsNeeded: number;
+  discountPercent: number;
+}
+const getDiscountTierForCoins = (availableCoins: number): DiscountTier | null => {
+  if (availableCoins >= 800) return { coinsNeeded: 800, discountPercent: 80 };
+  if (availableCoins >= 700) return { coinsNeeded: 700, discountPercent: 70 };
+  if (availableCoins >= 500) return { coinsNeeded: 500, discountPercent: 60 };
+  if (availableCoins >= 400) return { coinsNeeded: 400, discountPercent: 40 };
+  if (availableCoins >= 300) return { coinsNeeded: 300, discountPercent: 30 };
+  if (availableCoins >= 200) return { coinsNeeded: 200, discountPercent: 20 };
+  if (availableCoins >= 100) return { coinsNeeded: 100, discountPercent: 10 };
+  return null;
+};
+// --- End Tiered Discount Logic ---
+
 const Cart: React.FC = () => {
-  const { cart, removeItem, updateQuantity, clearCart } = useCart();
-  const { user, profile } = useAuthContext();
+  const { cart, removeItem, updateQuantity, clearCart, applyCoupon, removeCoupon, applyCoins, removeCoins } = useCart();
+  const { user, profile: authProfile, loading: authLoading } = useAuthContext();
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("card");
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  const deliveryFee = 49;
-  const tax = cart.totalAmount * 0.05;
-  
-  // Calculate discount if coupon is applied
-  const discount = appliedCoupon 
-    ? appliedCoupon.discount >= 1 
-      ? (appliedCoupon.discount / 100) * cart.totalAmount 
-      : appliedCoupon.discount
-    : 0;
-  
-  const totalAmount = cart.totalAmount + deliveryFee + tax - discount;
+  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(authProfile);
+  const [isApplyingCode, setIsApplyingCode] = useState(false);
 
-  const handleApplyCoupon = () => {
-    const foundCoupon = offers.find(offer => 
-      offer.code.toLowerCase() === couponCode.toLowerCase()
-    );
-    
-    if (foundCoupon) {
-      setAppliedCoupon(foundCoupon);
-      toast.success(`Coupon ${foundCoupon.code} applied successfully!`);
-    } else {
-      toast.error("Invalid coupon code");
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProfile = async (userId: string) => {
+        try {
+            const profileData = await userService.getUserProfile(userId);
+            if (isMounted) {
+                 setCurrentProfile(profileData);
+                 if(profileData){
+                    setDeliveryAddress(prev => prev || profileData.address || "");
+                    setCustomerName(prev => prev || profileData.full_name || "");
+                    setCustomerPhone(prev => prev || profileData.phone || "");
+                 }
+            }
+        } catch (error) {
+            console.error("Failed to fetch user profile for cart:", error);
+            if (isMounted) setCurrentProfile(null);
+        }
+    };
+
+    if (user?.uid && !authLoading) {
+        if (authProfile) {
+             setCurrentProfile(authProfile);
+             setDeliveryAddress(prev => prev || authProfile.address || "");
+             setCustomerName(prev => prev || authProfile.full_name || "");
+             setCustomerPhone(prev => prev || authProfile.phone || "");
+        } else {
+            fetchProfile(user.uid);
+        }
+    } else if (!authLoading) {
+        setCurrentProfile(null);
+        setDeliveryAddress("");
+        setCustomerName("");
+        setCustomerPhone("");
     }
+
+    return () => { isMounted = false };
+    
+  }, [user, authProfile, authLoading]);
+
+  // --- Calculations --- 
+  const deliveryFee = 49;
+  const taxRate = 0.05;
+  const tax = cart.subtotal * taxRate;
+  const couponDiscount = cart.couponDiscountAmount;
+  const coinDiscount = cart.coinDiscountAmount;
+  const totalAmount = cart.totalAmount;
+  const availableCoins = currentProfile?.supercoins || 0;
+  const appliedCoins = cart.appliedCoins;
+
+  const applicableTier = getDiscountTierForCoins(availableCoins);
+
+  let potentialCoinDiscountAmount = 0;
+  if (applicableTier) {
+      potentialCoinDiscountAmount = Math.min(
+          cart.subtotal, 
+          cart.subtotal * (applicableTier.discountPercent / 100)
+      );
+  }
+
+  // Updated handler for applying coupons, user's own code, OR using "SUPERCOINS" keyword
+  const handleApplyCode = async () => {
+    const codeToApply = couponCode.trim().toUpperCase();
+    if (!codeToApply) return;
+    
+    setIsApplyingCode(true);
+    console.log(`Attempting to apply standard coupon: "${codeToApply}"`); 
+
+    const standardCoupons: { [code: string]: number } = {
+        "TASTEBUD10": 50,
+        "WELCOME50": cart.subtotal * 0.5,
+    };
+
+    if (standardCoupons[codeToApply] !== undefined) {
+        const discountAmount = standardCoupons[codeToApply];
+        const actualDiscount = Math.min(cart.subtotal, discountAmount);
+        
+        if (actualDiscount > 0) {
+            applyCoupon(codeToApply, actualDiscount);
+            setCouponCode("");
+            toast.success(`Coupon ${codeToApply} applied!`);
+        } else {
+            toast.info("Coupon value is zero or cart is empty.");
+        }
+    } else {
+        toast.error(`Invalid coupon code: ${codeToApply}`);
+    }
+
+    setIsApplyingCode(false);
   };
 
   const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
+    removeCoupon();
     setCouponCode("");
     toast.success("Coupon removed");
   };
 
+  // --- Quantity Handlers --- 
   const handleIncreaseQuantity = (id: string) => {
     const item = cart.items.find(item => item.id === id);
     if (item) {
@@ -76,6 +163,22 @@ const Cart: React.FC = () => {
     }
   };
 
+  // --- Re-add Supercoins handlers --- 
+  const handleApplyCoins = () => {
+      if (applicableTier && potentialCoinDiscountAmount > 0) {
+          applyCoins(applicableTier.coinsNeeded, potentialCoinDiscountAmount);
+          toast.success(`Applied ${applicableTier.coinsNeeded} Supercoins for ${applicableTier.discountPercent}% off!`);
+      } else {
+          toast.info("Not enough Supercoins for a discount or cart is empty.");
+      }
+  };
+
+  const handleRemoveCoins = () => {
+      removeCoins();
+      toast.info("Supercoin discount removed.");
+  };
+
+  // --- Checkout Handler (No changes needed here for this logic) --- 
   const handleCheckout = async () => {
     if (!user) {
       toast.error("Please log in to place an order.");
@@ -95,11 +198,9 @@ const Cart: React.FC = () => {
       return;
     }
 
-    // 1. Generate a new Order ID for Firestore
     const newOrderRef = doc(collection(db, "orders"));
     const newOrderId = newOrderRef.id;
 
-    // 2. Prepare the Order data matching the Firestore Order type
     const orderData: NewOrderData = {
       customer_id: user.uid,
       restaurant_id: cart.restaurantId,
@@ -109,44 +210,58 @@ const Cart: React.FC = () => {
         quantity: item.quantity,
         price: item.price,
       })) as OrderItemType[],
-      totalAmount: totalAmount,
+      subtotal: cart.subtotal,
+      couponCode: cart.appliedCouponCode,
+      couponDiscount: cart.couponDiscountAmount,
+      coinsApplied: cart.appliedCoins,
+      coinDiscount: cart.coinDiscountAmount,
+      deliveryFee: deliveryFee,
+      tax: tax,
+      totalAmount: cart.totalAmount,
       status: 'Pending' as OrderStatus,
       deliveryAddress: {
         street: deliveryAddress,
-        city: "",
+        city: "", // Assuming city/state/zip are not collected or needed here
         state: "",
         zip: "",
         notes: "",
       },
-      customerName: user.displayName || profile?.full_name || user.email || 'N/A',
-      customerPhone: profile?.phone || 'N/A',
+      customerName: customerName || user?.email || 'N/A',
+      customerPhone: customerPhone || 'N/A',
       paymentMethod: paymentMethod,
       createdAt: serverTimestamp(),
     };
 
-    // 3. Create a Write Batch
     const batch = writeBatch(db);
-
-    // 4. Set the main order document
     batch.set(newOrderRef, orderData);
-
-    // 5. Set the user's order subcollection document
     const userOrderRef = doc(db, "users", user.uid, "orders", newOrderId);
     batch.set(userOrderRef, orderData);
 
     try {
-      // 6. Commit the batch
       await batch.commit();
-
-      // Save the new order ID to localStorage for the tracking page
       localStorage.setItem("latestOrderId", newOrderId);
-
-      // 7. Clear cart (local state)
-      clearCart();
-
-      // 8. Navigate to the new order tracking page path
       toast.success("Order placed successfully!");
-      navigate("/dashboard/order-tracking");
+
+      // --- Post-Order Actions --- 
+      const postOrderPromises = [];
+
+      // 1. Apply Coin Discount to User Profile (if coins were manually applied)
+      if (cart.appliedCoins > 0 && cart.coinDiscountAmount > 0) { 
+          postOrderPromises.push(
+              userService.applyCoinDiscountToUser(user!.uid, cart.appliedCoins, cart.coinDiscountAmount)
+                .then(() => toast.info(`${cart.appliedCoins} Supercoins used for discount.`))
+                .catch(err => {
+                     console.error("CRITICAL: Failed to apply coin discount to user profile:", err);
+                     toast.error("CRITICAL: Failed to update Supercoin balance/stats! Please contact support.");
+                })
+          );
+      } 
+      
+      await Promise.all(postOrderPromises);
+      clearCart();
+      // Navigate to the new success page, passing the order ID in state
+      console.log(`NAVIGATING to /order-success with orderId: ${newOrderId}`);
+      navigate("/order-success", { state: { orderId: newOrderId } });
 
     } catch (error) {
       console.error("Error placing order in Firestore:", error);
@@ -189,8 +304,9 @@ const Cart: React.FC = () => {
           {/* Cart Items */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+              {/* Display restaurant name if available (Assuming it might be on cart state later) */}
               <h2 className="text-lg font-semibold mb-3">
-                {cart.restaurantName} ({cart.items.length} {cart.items.length === 1 ? "item" : "items"})
+                {/* {cart.restaurantName ? `${cart.restaurantName} ` : ''} */} ({cart.items.length} {cart.items.length === 1 ? "item" : "items"})
               </h2>
               
               <div className="divide-y">
@@ -209,12 +325,49 @@ const Cart: React.FC = () => {
             
             {/* Delivery Info */}
             <div className="bg-white rounded-lg shadow-sm p-4">
-              <h2 className="text-lg font-semibold mb-3">Delivery Information</h2>
+              <h2 className="text-lg font-semibold mb-4">Delivery & Contact Information</h2>
               
+              {/* Name Input */} 
               <div className="mb-4">
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                  Delivery Address
-                </label>
+                  <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+                  <div className="relative rounded-md shadow-sm">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <User className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                      </div>
+                      <input
+                          type="text"
+                          name="customerName"
+                          id="customerName"
+                          className="input-field block w-full pl-10"
+                          placeholder="Enter contact name"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                      />
+                  </div>
+              </div>
+              
+              {/* Phone Input */} 
+               <div className="mb-4">
+                  <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                  <div className="relative rounded-md shadow-sm">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <Phone className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                      </div>
+                      <input
+                          type="tel" // Use tel type for better mobile input
+                          name="customerPhone"
+                          id="customerPhone"
+                          className="input-field block w-full pl-10"
+                          placeholder="Enter contact phone number"
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(e.target.value)}
+                      />
+                  </div>
+              </div>
+              
+              {/* Address Input */}
+              <div className="mb-4">
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
                 <textarea
                   id="address"
                   rows={isMobile ? 2 : 3}
@@ -226,12 +379,14 @@ const Cart: React.FC = () => {
                 ></textarea>
               </div>
               
+              {/* Payment Method */} 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Payment Method
                 </label>
                 <div className="space-y-2">
-                  <div className="flex items-center">
+                  {/* Radio buttons for payment methods remain the same */}
+                   <div className="flex items-center">
                     <input
                       id="card"
                       name="paymentMethod"
@@ -280,94 +435,127 @@ const Cart: React.FC = () => {
           
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-4 sticky top-20">
-              <h2 className="text-lg font-semibold mb-3">Order Summary</h2>
+            <div className="bg-white rounded-lg shadow-sm p-4 sticky top-20 space-y-4">
+              <h2 className="text-lg font-semibold border-b pb-2">Order Summary</h2>
               
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Item Total</span>
-                  <span className="flex items-center">
-                    <IndianRupee size={14} className="mr-1" />
-                    {cart.totalAmount.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Delivery Fee</span>
-                  <span className="flex items-center">
-                    <IndianRupee size={14} className="mr-1" />
-                    {deliveryFee.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">GST (5%)</span>
-                  <span className="flex items-center">
-                    <IndianRupee size={14} className="mr-1" />
-                    {tax.toFixed(2)}
-                  </span>
-                </div>
+              {/* --- Re-added Supercoins Section --- */}
+              <div className="border-b pb-3">
+                  <h3 className="text-sm font-medium mb-2 flex items-center">
+                      <Coins size={16} className="mr-2 text-yellow-500"/> Supercoins
+                  </h3>
+                  <p className="text-xs text-gray-600 mb-2">Balance: {availableCoins} coins</p>
+                  
+                  {/* If coins are currently applied */} 
+                  {cart.appliedCoins > 0 && (
+                       <div className="flex justify-between items-center text-sm bg-green-50 p-2 rounded border border-green-200">
+                          <span className="text-green-700 font-medium">
+                               <Gift size={14} className="inline mr-1"/> {getDiscountTierForCoins(cart.appliedCoins)?.discountPercent}% Discount Applied! (-₹{cart.coinDiscountAmount.toFixed(2)})
+                           </span>
+                           <button onClick={handleRemoveCoins} className="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>
+                       </div>
+                  )}
+                  
+                  {/* If coins are NOT applied, show button for highest applicable tier */} 
+                  {cart.appliedCoins === 0 && applicableTier && (
+                       <button 
+                           onClick={handleApplyCoins}
+                           disabled={!!cart.appliedCouponCode || potentialCoinDiscountAmount <= 0}
+                           className="w-full text-sm btn-secondary py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                       >
+                          Apply {applicableTier.coinsNeeded} coins for {applicableTier.discountPercent}% off (₹{potentialCoinDiscountAmount.toFixed(2)})
+                       </button>
+                  )} 
+                  
+                  {/* If user doesn't qualify for any tier */} 
+                   {cart.appliedCoins === 0 && !applicableTier && (
+                       <p className="text-xs text-gray-500 italic">Need 100 coins for 10% off!</p>
+                  )}
+                  
+                  {/* Message if coupon blocking coins */} 
+                  {cart.appliedCouponCode && cart.appliedCoins === 0 && applicableTier && (
+                      <p className="text-xs text-orange-600 mt-1">Cannot apply coins when a coupon is active.</p>
+                  )}
+              </div>
+
+              {/* --- Coupon Code Section --- */}
+              <div className="border-b pb-3">
+                  <h3 className="text-sm font-medium mb-2 flex items-center">
+                      <Tag size={16} className="mr-2 text-blue-500"/> Coupon Code
+                  </h3>
+                  
+                  {/* Display applied Coupon */} 
+                  {cart.appliedCouponCode ? (
+                      <div className="flex justify-between items-center text-sm bg-green-50 p-2 rounded border border-green-200 mb-2">
+                           <span className="text-green-700 font-medium">
+                              Code "{cart.appliedCouponCode}" Applied! (-₹{cart.couponDiscountAmount.toFixed(2)})
+                           </span>
+                           <button onClick={handleRemoveCoupon} className="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>
+                      </div>
+                  ) : (
+                       // Show input only if NO coupon applied
+                       <> 
+                         <div className="flex space-x-2"> 
+                           <input
+                               type="text"
+                               placeholder="Enter coupon code"
+                               className="input-field flex-grow text-sm py-1.5"
+                               value={couponCode}
+                               onChange={(e) => setCouponCode(e.target.value)}
+                               disabled={isApplyingCode || cart.appliedCoins > 0}
+                           />
+                           <button 
+                               onClick={handleApplyCode}
+                               disabled={!couponCode || isApplyingCode || cart.appliedCoins > 0}
+                               className="btn-secondary text-sm py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                           >
+                               {isApplyingCode ? <Loader2 className="h-4 w-4 animate-spin mr-1"/> : null}
+                               Apply
+                           </button>
+                         </div>
+                       </>
+                  )}
+                   {/* Message if coins blocking coupon */} 
+                  {cart.appliedCoins > 0 && (
+                      <p className="text-xs text-orange-600 mt-1">Cannot apply coupon when Supercoins are used.</p>
+                  )}
+              </div>
+
+              {/* --- Price Breakdown --- */}
+              <div className="space-y-1 text-sm border-b pb-3">
+                <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span><IndianRupee size={12} className="inline mr-0.5"/>{cart.subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-600">Delivery Fee</span><span><IndianRupee size={12} className="inline mr-0.5"/>{deliveryFee.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-600">Taxes (5%)</span><span><IndianRupee size={12} className="inline mr-0.5"/>{tax.toFixed(2)}</span></div>
                 
-                {appliedCoupon && (
+                {/* Display Coupon Discount if applied */} 
+                {couponDiscount > 0 && cart.appliedCouponCode && (
                   <div className="flex justify-between text-green-600">
-                    <span className="flex items-center">
-                      Discount ({appliedCoupon.code})
-                      <button
-                        onClick={handleRemoveCoupon}
-                        className="ml-2 text-gray-400 hover:text-gray-600"
-                      >
-                        <X size={14} />
-                      </button>
-                    </span>
-                    <span className="flex items-center">
-                      -<IndianRupee size={14} className="mx-1" />
-                      {discount.toFixed(2)}
-                    </span>
+                      <span>Coupon Discount ({cart.appliedCouponCode})</span>
+                      <span>-<IndianRupee size={12} className="inline mr-0.5"/>{couponDiscount.toFixed(2)}</span>
                   </div>
                 )}
-                
-                <div className="border-t pt-3 flex justify-between font-bold">
-                  <span>Total</span>
-                  <span className="flex items-center">
-                    <IndianRupee size={16} className="mr-1" />
-                    {totalAmount.toFixed(2)}
-                  </span>
-                </div>
+                {/* Display Coin Discount if applied */} 
+                {coinDiscount > 0 && cart.appliedCoins > 0 && (
+                  <div className="flex justify-between text-green-600">
+                      <span>Supercoin Discount ({getDiscountTierForCoins(cart.appliedCoins)?.discountPercent}%)</span>
+                      <span>-<IndianRupee size={12} className="inline mr-0.5"/>{coinDiscount.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
-              
-              {/* Coupon */}
-              {!appliedCoupon && (
-                <div className="mb-4">
-                  <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-1">
-                    Coupon Code
-                  </label>
-                  <div className="flex">
-                    <input
-                      type="text"
-                      id="coupon"
-                      className="input-field rounded-r-none flex-grow text-sm"
-                      placeholder="Enter coupon code"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                    />
-                    <button
-                      onClick={handleApplyCoupon}
-                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-3 rounded-r-md text-sm"
-                      disabled={!couponCode}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  <div className="mt-2 text-xs text-gray-500 flex items-center">
-                    <Tag size={12} className="mr-1" />
-                    <span>Try WELCOME50 for 50% off your first order</span>
-                  </div>
-                </div>
-              )}
-              
+
+              {/* Final Total */} 
+              <div className="border-t pt-3 flex justify-between font-bold">
+                <span>Total</span>
+                <span className="flex items-center">
+                  <IndianRupee size={16} className="mr-1" />
+                  {cart.totalAmount.toFixed(2)} 
+                </span>
+              </div>
+
               {/* Checkout Button */}
               <button
                 onClick={handleCheckout}
                 className="btn-primary w-full flex justify-center items-center"
-                disabled={!cart.items.length}
+                disabled={!deliveryAddress.trim() || cart.items.length === 0}
               >
                 <CreditCard size={18} className="mr-2" />
                 Place Order
