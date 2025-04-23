@@ -126,9 +126,6 @@ const OrderTracking: React.FC = () => {
 
         toast.success("Thank you for donating! You've earned Supercoins.");
 
-        // Navigate to the new rewards page
-        navigate("/customer/rewards");
-
     } catch (err) {
         console.error("Error processing donation actions:", err);
         toast.error("An error occurred while processing your donation. Please try again.");

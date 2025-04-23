@@ -111,6 +111,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 favoriteRestaurantIds: rawData.favoriteRestaurantIds ?? [], // Include favorites
                 // --- Use the CORRECTED type ---
                 user_type: finalUserType,
+                // --- ADD supercoins field --- 
+                supercoins: typeof rawData.supercoins === 'number' ? rawData.supercoins : 0, // Read supercoins, default to 0 if missing/wrong type
                 // Add other fields from UserProfile if necessary, using nullish coalescing
                 // e.g., createdAt: rawData.createdAt ?? null, 
               };

@@ -51,12 +51,16 @@ const Cart: React.FC = () => {
   const [isApplyingCode, setIsApplyingCode] = useState(false);
 
   useEffect(() => {
+    console.log("Cart profile useEffect triggered.");
     let isMounted = true;
     const fetchProfile = async (userId: string) => {
+        console.log(`Fetching profile for userId: ${userId}`);
         try {
             const profileData = await userService.getUserProfile(userId);
+            console.log("Fetched profile data:", profileData);
             if (isMounted) {
                  setCurrentProfile(profileData);
+                 console.log("Set currentProfile with fetched data.");
                  if(profileData){
                     setDeliveryAddress(prev => prev || profileData.address || "");
                     setCustomerName(prev => prev || profileData.full_name || "");
@@ -65,27 +69,41 @@ const Cart: React.FC = () => {
             }
         } catch (error) {
             console.error("Failed to fetch user profile for cart:", error);
-            if (isMounted) setCurrentProfile(null);
+            if (isMounted) {
+                 setCurrentProfile(null);
+                 console.log("Set currentProfile to null due to fetch error.");
+            }
         }
     };
 
     if (user?.uid && !authLoading) {
+        console.log(`User found (UID: ${user.uid}), authLoading: ${authLoading}`);
         if (authProfile) {
+             console.log("Using profile from AuthContext:", authProfile);
              setCurrentProfile(authProfile);
+             console.log("Set currentProfile with AuthContext data.");
              setDeliveryAddress(prev => prev || authProfile.address || "");
              setCustomerName(prev => prev || authProfile.full_name || "");
              setCustomerPhone(prev => prev || authProfile.phone || "");
         } else {
+            console.log("Profile not in AuthContext, attempting fetch...");
             fetchProfile(user.uid);
         }
     } else if (!authLoading) {
+        console.log(`No user or finished loading without user (authLoading: ${authLoading})`);
         setCurrentProfile(null);
+        console.log("Set currentProfile to null (no user).");
         setDeliveryAddress("");
         setCustomerName("");
         setCustomerPhone("");
+    } else {
+        console.log("Auth is still loading...");
     }
 
-    return () => { isMounted = false };
+    return () => {
+        console.log("Cart profile useEffect cleanup.");
+        isMounted = false
+    };
     
   }, [user, authProfile, authLoading]);
 
