@@ -206,6 +206,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ menuItem, onSubmit, onCance
           id="image_url"
           name="image_url"
           type="url"
+          className="w-full"
           value={formData.image_url || ''}
           onChange={handleInputChange}
           placeholder="https://yourdomain.com/image.jpg"

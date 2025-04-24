@@ -166,7 +166,11 @@ const MenuManager: React.FC<MenuManagerProps> = ({ restaurantId }) => {
               </TableHeader>
               <TableBody>
                 {menuItems.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow 
+                    key={item.id} 
+                    onClick={() => handleEditClick(item)}
+                    className="cursor-pointer hover:bg-muted/50"
+                  >
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.category || 'N/A'}</TableCell>
                     <TableCell className="text-sm text-gray-600 max-w-xs truncate">{item.description || '-'}</TableCell>
@@ -175,9 +179,6 @@ const MenuManager: React.FC<MenuManagerProps> = ({ restaurantId }) => {
                       {item.price.toFixed(2)}
                     </TableCell>
                     <TableCell className="space-x-2 whitespace-nowrap">
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleEditClick(item)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button 
@@ -185,6 +186,7 @@ const MenuManager: React.FC<MenuManagerProps> = ({ restaurantId }) => {
                             size="icon" 
                             className="h-7 w-7"
                             disabled={deletingItemId === item.id}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             {deletingItemId === item.id ? 
                               <Loader2 className="h-4 w-4 animate-spin" /> : 
@@ -192,7 +194,7 @@ const MenuManager: React.FC<MenuManagerProps> = ({ restaurantId }) => {
                             }
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
