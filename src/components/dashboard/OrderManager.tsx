@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle, Clock, Package, Truck, XCircle, Utensils, IndianRupee } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Package, Truck, XCircle, Utensils, IndianRupee, Eye } from 'lucide-react';
 import { format } from 'date-fns'; // For formatting timestamps
 
 interface OrderManagerProps {
@@ -105,21 +105,23 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Order ID</TableHead>
+          <TableHead className="hidden sm:table-cell">Order ID</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Customer</TableHead>
           <TableHead className="text-right">Total</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead className="w-[180px]">Status</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {[...Array(5)].map((_, i) => (
           <TableRow key={i}>
-            <TableCell><Skeleton className="h-5 w-24 rounded" /></TableCell>
+            <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-20 rounded" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-28 rounded" /></TableCell>
             <TableCell><Skeleton className="h-5 w-32 rounded" /></TableCell>
-            <TableCell><Skeleton className="h-5 w-40 rounded" /></TableCell>
-            <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto rounded" /></TableCell>
-            <TableCell><Skeleton className="h-8 w-32 rounded" /></TableCell>
+            <TableCell className="text-right"><Skeleton className="h-5 w-14 ml-auto rounded" /></TableCell>
+            <TableCell><Skeleton className="h-8 w-full rounded" /></TableCell>
+            <TableCell><Skeleton className="h-8 w-20 rounded" /></TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -153,56 +155,79 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
   }
 
   return (
-    <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Customer</TableHead>
-              {/* Add More Columns if needed: Items summary, Address? */}
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="w-[180px]">Status</TableHead> {/* Give status column enough width */}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders.map((order) => (
+    <div className="overflow-x-auto border rounded-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="hidden sm:table-cell">Order ID</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Customer</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+            <TableHead className="min-w-[160px]">Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {orders.map((order) => {
+            // Handle potential Date or Timestamp for createdAt
+            const orderDate = order.createdAt 
+              ? (typeof (order.createdAt as any).toDate === 'function' 
+                  ? (order.createdAt as any).toDate() 
+                  : order.createdAt as Date)
+              : null;
+
+            return (
               <TableRow 
                 key={order.id} 
-                onClick={() => navigate(`/dashboard/orders/${order.id}`)}
-                className="cursor-pointer hover:bg-muted/50"
               >
-                <TableCell className="font-mono text-xs" title={order.id}>{order.id.substring(0, 8)}...</TableCell>
-                <TableCell>{order.createdAt ? format(order.createdAt.toDate(), 'PPpp') : 'N/A'}</TableCell>
-                <TableCell>{order.customerName || order.customer_id.substring(0,8) || 'N/A'}</TableCell>
-                <TableCell className="text-right font-medium flex items-center justify-end">
-                  <IndianRupee size={14} className="mr-0.5" />
-                  {order.totalAmount.toFixed(2)}
+                <TableCell className="hidden sm:table-cell font-mono text-xs pt-4" title={order.id}>{order.id.substring(0, 8)}...</TableCell>
+                {/* Format the derived date object */}
+                <TableCell className="pt-4">{orderDate ? format(orderDate, 'PP p') : 'N/A'}</TableCell>
+                {/* Use optional chaining for customerName */}
+                <TableCell className="pt-4">{order.customerName ?? order.customer_id?.substring(0,8) ?? 'N/A'}</TableCell>
+                <TableCell className="text-right font-medium pt-4">
+                   <span className="flex items-center justify-end">
+                      <IndianRupee size={14} className="mr-0.5" />
+                      {order.totalAmount.toFixed(2)}
+                   </span>
+                </TableCell>
+                <TableCell className="min-w-[160px]">
+                  <div onClick={(e) => e.stopPropagation()}> 
+                    <Select 
+                      value={order.status}
+                      onValueChange={(newStatus) => handleStatusChange(order.id, order.customer_id, newStatus as OrderStatus)}
+                      disabled={updatingStatus[order.id]}
+                    >
+                      <SelectTrigger className={`w-full h-8 text-xs ${updatingStatus[order.id] ? 'opacity-50' : ''}`}> 
+                        <SelectValue placeholder="Set status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStatuses.map((status) => (
+                          <SelectItem key={status} value={status} className="text-xs">
+                            {status} 
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <Select 
-                    value={order.status}
-                    onValueChange={(newStatus) => handleStatusChange(order.id, order.customer_id, newStatus as OrderStatus)}
-                    disabled={updatingStatus[order.id]}
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/dashboard/orders/${order.id}`)}
+                    className="h-8 px-2"
+                    aria-label={`View details for order ${order.id.substring(0, 8)}`}
                   >
-                    <SelectTrigger className={`w-full h-8 text-xs ${updatingStatus[order.id] ? 'opacity-50' : ''}`}> 
-                      <SelectValue placeholder="Set status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableStatuses.map((status) => (
-                        <SelectItem key={status} value={status} className="text-xs">
-                          {status} 
-                          {/* Optionally add icons based on status */}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {/* <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge> */} 
+                    <Eye size={14} className="mr-1 sm:mr-2"/> 
+                    <span className="hidden sm:inline">Details</span>
+                  </Button>
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
   );
 };

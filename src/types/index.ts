@@ -98,6 +98,7 @@ export interface Order {
   customer_id: string;
   restaurant_id: string;
   restaurantName?: string; // Optional: denormalized for easier display
+  customerName?: string | null; // Add optional customer name
   items: OrderItem[];
   totalAmount: number;
   status: OrderStatus;

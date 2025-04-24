@@ -26,7 +26,7 @@ const RestaurantDetail: React.FC = () => {
 
   const { 
     menuItems, 
-    loading: menuItemsLoading, 
+    isLoading: menuItemsLoading,
     error: menuItemsError 
   } = useMenuItems(id);
 
@@ -38,26 +38,37 @@ const RestaurantDetail: React.FC = () => {
       navigate("/");
       return;
     }
+    
+    console.log(`[Effect fetchRestaurant] Running for ID: ${id}`);
 
     const fetchRestaurant = async () => {
+      console.log(`[fetchRestaurant] Setting loading true for ID: ${id}`);
       setLoading(true);
       setError(null);
+      setImageError(false);
       try {
         const restaurantDocRef = doc(db, "restaurants", id);
         const docSnap = await getDoc(restaurantDocRef);
+        
+        console.log(`[fetchRestaurant] docSnap.exists() for ID ${id}:`, docSnap.exists());
 
         if (docSnap.exists()) {
-          setRestaurant({ id: docSnap.id, ...docSnap.data() } as Restaurant);
+          const fetchedData = { id: docSnap.id, ...docSnap.data() } as Restaurant;
+          console.log(`[fetchRestaurant] Data found for ID ${id}. Preparing to set state:`, fetchedData);
+          setRestaurant(fetchedData);
+          console.log(`[fetchRestaurant] setRestaurant called for ID ${id}.`);
         } else {
+          console.log(`[fetchRestaurant] No document found for ID ${id}. Setting error.`);
           setError("Restaurant not found.");
           toast.error("Restaurant not found");
         }
       } catch (err) {
-        console.error("Error fetching restaurant:", err);
+        console.error(`[fetchRestaurant] Error fetching restaurant ID ${id}:`, err);
         const errorMessage = err instanceof Error ? err.message : "Failed to load restaurant details.";
         setError(errorMessage);
         toast.error(errorMessage);
       } finally {
+        console.log(`[fetchRestaurant] Setting loading false for ID: ${id}`);
         setLoading(false);
       }
     };
@@ -118,7 +129,13 @@ const RestaurantDetail: React.FC = () => {
     );
   }
 
-  // Determine the correct image source
+  console.log('Image URLs for Render:', { 
+    cover: restaurant.coverImageUrl, 
+    image: restaurant.image_url 
+  });
+  console.log('Website:', restaurant.website);
+  console.log('Opening Hours:', restaurant.opening_hours);
+
   const coverImage = restaurant.coverImageUrl || restaurant.image_url;
   const placeholderImage = "https://placehold.co/1200x400/png?text=Restaurant+Image";
   const imageSource = imageError || !coverImage ? placeholderImage : coverImage;
@@ -193,12 +210,12 @@ const RestaurantDetail: React.FC = () => {
                 <div className="flex items-center">
                   <Globe size={18} className="mr-2 text-primary" />
                   <a 
-                    href={restaurant.website || "#"} 
+                    href={restaurant.website ?? "#"}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className={`text-primary hover:underline ${!restaurant.website ? 'text-gray-400 italic pointer-events-none' : ''}`}
                   >
-                    {restaurant.website || "Website not available"}
+                    {restaurant.website ?? "Website not available"}
                   </a>
                 </div>
               </div>
