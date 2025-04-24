@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle, Clock, Package, Truck, XCircle, Utensils, IndianRupee, Eye } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Package, Truck, XCircle, Utensils, IndianRupee } from 'lucide-react';
 import { format } from 'date-fns'; // For formatting timestamps
 
 interface OrderManagerProps {
@@ -110,7 +110,6 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
           <TableHead>Customer</TableHead>
           <TableHead className="text-right">Total</TableHead>
           <TableHead className="w-[180px]">Status</TableHead>
-          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -121,7 +120,6 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
             <TableCell><Skeleton className="h-5 w-32 rounded" /></TableCell>
             <TableCell className="text-right"><Skeleton className="h-5 w-14 ml-auto rounded" /></TableCell>
             <TableCell><Skeleton className="h-8 w-full rounded" /></TableCell>
-            <TableCell><Skeleton className="h-8 w-20 rounded" /></TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -164,12 +162,10 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
             <TableHead>Customer</TableHead>
             <TableHead className="text-right">Total</TableHead>
             <TableHead className="min-w-[160px]">Status</TableHead>
-            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {orders.map((order) => {
-            // Handle potential Date or Timestamp for createdAt
             const orderDate = order.createdAt 
               ? (typeof (order.createdAt as any).toDate === 'function' 
                   ? (order.createdAt as any).toDate() 
@@ -179,11 +175,11 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
             return (
               <TableRow 
                 key={order.id} 
+                onClick={() => navigate(`/dashboard/orders/${order.id}`)}
+                className="cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="hidden sm:table-cell font-mono text-xs pt-4" title={order.id}>{order.id.substring(0, 8)}...</TableCell>
-                {/* Format the derived date object */}
                 <TableCell className="pt-4">{orderDate ? format(orderDate, 'PP p') : 'N/A'}</TableCell>
-                {/* Use optional chaining for customerName */}
                 <TableCell className="pt-4">{order.customerName ?? order.customer_id?.substring(0,8) ?? 'N/A'}</TableCell>
                 <TableCell className="text-right font-medium pt-4">
                    <span className="flex items-center justify-end">
@@ -210,18 +206,6 @@ const OrderManager: React.FC<OrderManagerProps> = ({ restaurantId }) => {
                       </SelectContent>
                     </Select>
                   </div>
-                </TableCell>
-                <TableCell>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/dashboard/orders/${order.id}`)}
-                    className="h-8 px-2"
-                    aria-label={`View details for order ${order.id.substring(0, 8)}`}
-                  >
-                    <Eye size={14} className="mr-1 sm:mr-2"/> 
-                    <span className="hidden sm:inline">Details</span>
-                  </Button>
                 </TableCell>
               </TableRow>
             );
