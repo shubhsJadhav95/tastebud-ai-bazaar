@@ -10,6 +10,7 @@ import { CartProvider } from "./context/CartContext";
 import Index from "./pages/Index";
 import CustomerLogin from "./pages/CustomerLogin";
 import RestaurantLogin from "./pages/RestaurantLogin";
+import RestaurantSignup from "./pages/RestaurantSignup"; // Import the signup page
 import CustomerHome from "./pages/CustomerHome";
 // import RestaurantDashboard from "./pages/RestaurantDashboard"; // Keep old one commented/removed for now
 import RestaurantSelect from "./pages/RestaurantSelect"; // Import the new select page
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/customer/login" element={<CustomerLogin />} />
               <Route path="/restaurant/login" element={<RestaurantLogin />} />
+              <Route path="/restaurant/signup" element={<RestaurantSignup />} /> {/* Add signup route */}
               <Route path="/customer/home" element={<CustomerHome />} />
               <Route path="/customer/profile" element={<CustomerProfile />} />
               <Route path="/customer/orders" element={<CustomerOrdersPage />} />

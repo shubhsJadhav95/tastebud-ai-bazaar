@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 
 const RestaurantLogin: React.FC = () => {
@@ -93,12 +93,20 @@ const RestaurantLogin: React.FC = () => {
                )}
             </Button>
           </form>
-          {/* Optional: Add links for password reset or signup if applicable */}
-          {/* <div className="mt-4 text-center text-sm">
-            <Link to="/restaurant/forgot-password" className="underline">
-              Forgot password?
-            </Link>
-          </div> */}
+          <CardFooter className="flex flex-col items-center text-sm space-y-2 pt-4">
+            <p>
+              Don't have an account?{' '}
+              <Link to="/restaurant/signup" className="font-medium text-food-primary hover:underline ml-1">
+                Sign Up
+              </Link>
+            </p>
+            {/* Optional: Add links for password reset if applicable */}
+            {/* <div className="mt-2 text-center text-sm">
+              <Link to="/restaurant/forgot-password" className="underline">
+                Forgot password?
+              </Link>
+            </div> */}
+          </CardFooter>
         </CardContent>
       </Card>
     </div>

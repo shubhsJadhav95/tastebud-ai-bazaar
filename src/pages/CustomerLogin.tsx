@@ -62,8 +62,8 @@ const CustomerLogin: React.FC = () => {
       console.log('Navigating to /customer/home...'); // Added log
       navigate("/customer/home");
     } else if (user && profile?.user_type === "restaurant") {
-      console.log('REDIRECT EFFECT: Condition MET! Navigating to /restaurant/dashboard...'); // Added log
-      navigate("/restaurant/dashboard");
+      console.log('REDIRECT EFFECT: Condition MET! Navigating to /restaurant/select...'); // Corrected log and target route
+      navigate("/restaurant/select"); // <-- Change target route
     } else if (user && !profile) {
       console.log('REDIRECT EFFECT: User exists, but profile is null/undefined.');
     } else if (!user) {

@@ -6,42 +6,37 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert components
-import { AlertCircle, Plus, Edit, Utensils } from 'lucide-react';
+import { AlertCircle, Plus, Edit, Utensils, Building } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthContext } from '@/contexts/AuthContext'; // Import auth context
+import { useRestaurantsByOwner } from '@/hooks/useRestaurantsByOwner'; // Import the hook
 
 const RestaurantListPage: React.FC = () => {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use the hook to fetch restaurants for the current owner
+  const { restaurants, isLoading: restaurantsLoading, error: restaurantsError } = useRestaurantsByOwner();
+  const { user, loading: authLoading } = useAuthContext(); // Get auth state
   const navigate = useNavigate();
 
+  // --- Authorization Check --- 
+  // Redirect if user is not logged in after auth check is complete
   useEffect(() => {
-    const fetchRestaurants = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Assuming getRestaurants fetches all needed - adjust if pagination/filtering is needed
-        const fetchedRestaurants = await restaurantService.getRestaurants();
-        setRestaurants(fetchedRestaurants);
-      } catch (err: any) {
-        console.error("Error fetching restaurants:", err);
-        const message = `Failed to load restaurants: ${err.message || 'Unknown error'}`;
-        setError(message);
-        toast.error(message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!authLoading && !user) {
+      toast.error("Please log in to view your restaurants.");
+      navigate('/restaurant/login');
+    }
+    // Optional: Add check for user_type === 'restaurant' if needed, though hook might handle implicitly
+  }, [user, authLoading, navigate]);
 
-    fetchRestaurants();
-  }, []); // Empty dependency array means fetch only once on mount
+  // --- Combined Loading State --- 
+  const isLoading = authLoading || restaurantsLoading;
 
+  // --- List Rendering Logic --- 
   const renderRestaurantList = () => {
-    if (loading) {
-      // Improved skeleton loading state
+    // Show skeleton while loading auth or restaurants
+    if (isLoading) {
       return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => ( // Show more skeletons for better visual
+          {[...Array(6)].map((_, i) => (
             <Card key={i} className="flex flex-col">
               <CardHeader>
                 <Skeleton className="h-6 w-3/4 rounded" />
@@ -60,34 +55,33 @@ const RestaurantListPage: React.FC = () => {
       );
     }
 
-    if (error) {
-      // Use Alert component for error display
+    // Show error message if fetching restaurants failed
+    if (restaurantsError) {
       return (
         <Alert variant="destructive" className="mt-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Restaurants</AlertTitle>
           <AlertDescription>
-            {error}
+            {restaurantsError} - Please try refreshing the page.
           </AlertDescription>
-          {/* Optional: Add a retry button? */}
-          {/* <Button variant="outline" size="sm" className="mt-2">Retry</Button> */}
         </Alert>
       );
     }
 
-    if (restaurants.length === 0) {
-       // Use Alert component for empty state (optional, can keep plain text)
+    // Show message if user is logged in but has no restaurants
+    if (!isLoading && restaurants.length === 0) {
       return (
         <Alert className="mt-4">
-          <Utensils className="h-4 w-4" />
-          <AlertTitle>No Restaurants Yet</AlertTitle>
+          <Building className="h-4 w-4" /> {/* Use Building icon */}
+          <AlertTitle>No Restaurants Found</AlertTitle>
           <AlertDescription>
-            Click the "Add New Restaurant" button to create your first one.
+            You haven't added any restaurants yet. Click the "Add New Restaurant" button to create your first one.
           </AlertDescription>
         </Alert>
       );
     }
 
+    // Render the actual list of restaurants
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {restaurants.map((restaurant) => (
@@ -95,12 +89,12 @@ const RestaurantListPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="truncate" title={restaurant.name}>{restaurant.name}</CardTitle>
               {/* Display logo */}
-               {restaurant.logoUrl ? (
-                 <img 
-                   src={restaurant.logoUrl} 
-                   alt={`${restaurant.name} logo`} 
-                   className="h-16 w-16 object-contain rounded mt-2 bg-gray-100" // Added bg for placeholder effect
-                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} // Hide if error
+               {(restaurant.logoUrl || restaurant.logo_url) ? ( // Check both fields
+                 <img
+                   src={restaurant.logoUrl || restaurant.logo_url} // Use the one that exists
+                   alt={`${restaurant.name} logo`}
+                   className="h-16 w-16 object-contain rounded mt-2 bg-gray-100"
+                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                  />
                ) : (
                  <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded mt-2 text-gray-400">
@@ -138,6 +132,38 @@ const RestaurantListPage: React.FC = () => {
      navigate('/dashboard/restaurants/new');
   };
 
+  // --- Main Render --- 
+  // Render based on auth state first
+  if (authLoading) {
+     // You might want a specific loading indicator while checking auth
+     return (
+        <div className="container mx-auto p-4 md:p-6 space-y-6">
+           <div className="flex justify-between items-center">
+             <Skeleton className="h-9 w-1/3 rounded-md" />
+             <Skeleton className="h-10 w-48 rounded-md" />
+           </div>
+           {/* Reuse the list skeleton */}
+           {renderRestaurantList()} 
+        </div>
+     );
+  }
+
+  // If not loading and no user (should be caught by useEffect redirect, but belt-and-suspenders)
+  if (!user) {
+      return (
+         <div className="container mx-auto p-4 md:p-6">
+           <Alert variant="destructive">
+             <AlertCircle className="h-4 w-4" />
+             <AlertTitle>Not Authenticated</AlertTitle>
+             <AlertDescription>
+               Please <Link to="/restaurant/login" className="underline">log in</Link> to manage your restaurants.
+             </AlertDescription>
+           </Alert>
+         </div>
+      );
+  }
+
+  // If authenticated, render the main content with the list renderer
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -146,8 +172,7 @@ const RestaurantListPage: React.FC = () => {
           <Plus className="mr-2 h-4 w-4" /> Add New Restaurant
         </Button>
       </div>
-
-      {renderRestaurantList()}
+      {renderRestaurantList()} 
     </div>
   );
 };

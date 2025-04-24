@@ -9,7 +9,18 @@ import { toast } from 'sonner';
 import { restaurantService } from '@/services/restaurantService'; // Adjust path if needed
 import { useAuthContext } from '@/contexts/AuthContext'; // Need owner_id
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react'; // Import Loader2 icon
+import { Loader2, Trash2 } from 'lucide-react'; // Import Loader2 and Trash2 icons
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"; // Import AlertDialog components
 
 interface RestaurantFormProps {
   restaurant?: Restaurant | null; // Optional: For edit mode
@@ -24,6 +35,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
   const navigate = useNavigate();
   const [formData, setFormData] = useState<RestaurantFormData>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // State for delete loading
 
   const isEditMode = !!restaurant;
 
@@ -32,7 +44,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
       const { id, createdAt, updatedAt, name_lowercase, ...editableData } = restaurant;
       setFormData(editableData);
     } else {
-      setFormData({ owner_id: user?.uid });
+      setFormData({ owner_id: user?.uid || undefined });
     }
   }, [restaurant, isEditMode, user]);
 
@@ -79,6 +91,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
       } else {
         savedRestaurant = await restaurantService.createRestaurant(dataToSubmit); 
         toast.success(`Restaurant "${savedRestaurant.name}" created successfully!`);
+        navigate(`/dashboard/restaurants/${savedRestaurant.id}`);
       }
 
       if (onSave) {
@@ -92,6 +105,27 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
       setIsSubmitting(false);
     }
   };
+
+  // --- Delete Handler ---
+  const handleDelete = async () => {
+    if (!isEditMode || !restaurant?.id) {
+      toast.error("Cannot delete unsaved or invalid restaurant.");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await restaurantService.deleteRestaurant(restaurant.id);
+      toast.success(`Restaurant "${restaurant.name}" deleted successfully.`);
+      navigate('/dashboard/restaurants'); // Navigate back to list after deletion
+    } catch (error: any) {
+      console.error("Error deleting restaurant:", error);
+      toast.error(error.message || "Failed to delete restaurant.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  // --- End Delete Handler ---
 
   return (
     <Card>
@@ -112,7 +146,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               onChange={handleInputChange}
               placeholder="e.g., The Delicious Place"
               required
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
             />
           </div>
           <div>
@@ -123,7 +157,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.cuisine || ''}
               onChange={handleInputChange}
               placeholder="e.g., Italian, Mexican, Cafe"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
             />
           </div>
           <div>
@@ -134,7 +168,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.address || ''}
               onChange={handleInputChange}
               placeholder="123 Main St, Anytown, USA"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
             />
           </div>
           <div>
@@ -145,7 +179,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.contactNumber || ''}
               onChange={handleInputChange}
               placeholder="+1 (555) 123-4567"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
             />
           </div>
           <div>
@@ -157,7 +191,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.logoUrl || ''}
               onChange={handleInputChange}
               placeholder="https://yourdomain.com/logo.png"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
             />
             {formData.logoUrl && (
                <div className="mt-2">
@@ -179,7 +213,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               value={formData.coverImageUrl || ''}
               onChange={handleInputChange}
               placeholder="https://yourdomain.com/cover.jpg"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
             />
             {formData.coverImageUrl && (
                <div className="mt-2">
@@ -193,8 +227,8 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
             )}
           </div>
         </CardContent>
-        <CardFooter>
-          <Button type="submit" disabled={isSubmitting}>
+        <CardFooter className="flex justify-between items-center border-t pt-4 gap-2">
+          <Button type="submit" disabled={isSubmitting || isDeleting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -204,6 +238,31 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({ restaurant, onSave }) =
               isEditMode ? 'Save Changes' : 'Create Restaurant'
             )}
           </Button>
+
+          {isEditMode && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" type="button" disabled={isSubmitting || isDeleting}>
+                  {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : <><Trash2 className="mr-2 h-4 w-4" /> Delete Restaurant</>}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the
+                    restaurant "{restaurant?.name}" and all associated data (including menus).
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {isDeleting ? 'Deleting...' : 'Yes, delete restaurant'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </CardFooter>
       </form>
     </Card>

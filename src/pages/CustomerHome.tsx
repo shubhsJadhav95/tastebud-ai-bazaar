@@ -229,8 +229,8 @@ const CustomerHome: React.FC = () => {
                        />
                      </Button>
                     <Link to={`/customer/restaurant/${restaurant.id}`}>
-                      <img 
-                        src={restaurant.image_url || '/placeholder-image.jpg'}
+                      <img
+                        src={restaurant.coverImageUrl || restaurant.image_url || '/placeholder-image.jpg'}
                         alt={restaurant.name}
                         className="h-40 w-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-image.jpg'; }}

@@ -118,6 +118,11 @@ const RestaurantDetail: React.FC = () => {
     );
   }
 
+  // Determine the correct image source
+  const coverImage = restaurant.coverImageUrl || restaurant.image_url;
+  const placeholderImage = "https://placehold.co/1200x400/png?text=Restaurant+Image";
+  const imageSource = imageError || !coverImage ? placeholderImage : coverImage;
+
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
@@ -125,9 +130,7 @@ const RestaurantDetail: React.FC = () => {
       <div className="flex-grow">
         <div className="relative h-64 md:h-80 lg:h-96">
           <img
-            src={imageError || !restaurant.image_url 
-              ? "https://placehold.co/1200x400/png?text=Restaurant+Image" 
-              : restaurant.image_url}
+            src={imageSource}
             alt={restaurant.name}
             className="w-full h-full object-cover"
             onError={() => setImageError(true)}
@@ -156,7 +159,7 @@ const RestaurantDetail: React.FC = () => {
               {restaurant.price_range && (
                 <div className="flex items-center">
                   <DollarSign size={16} className="mr-1" />
-                  <span>{'$'.repeat(restaurant.price_range)}</span>
+                  <span>{restaurant.price_range}</span>
                 </div>
               )}
             </div>
@@ -193,7 +196,7 @@ const RestaurantDetail: React.FC = () => {
                     href={restaurant.website || "#"} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline"
+                    className={`text-primary hover:underline ${!restaurant.website ? 'text-gray-400 italic pointer-events-none' : ''}`}
                   >
                     {restaurant.website || "Website not available"}
                   </a>
@@ -204,22 +207,15 @@ const RestaurantDetail: React.FC = () => {
             <div className="md:col-span-1">
               <h2 className="text-xl font-bold mb-4">Opening Hours</h2>
               <div className="bg-gray-50 p-4 rounded-lg">
-                {restaurant.opening_hours ? (
+                {restaurant.opening_hours && typeof restaurant.opening_hours === 'object' ? (
                   Object.entries(restaurant.opening_hours).map(([day, hours]) => (
                     <div key={day} className="flex justify-between py-1 border-b last:border-b-0">
                       <span className="font-medium capitalize">{day}</span>
-                      <span>{hours || "Closed"}</span>
+                      <span>{typeof hours === 'string' ? hours : "N/A"}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day => (
-                      <React.Fragment key={day}>
-                        <div className="text-gray-700 capitalize">{day}</div>
-                        <div>9:00 AM - 10:00 PM</div>
-                      </React.Fragment>
-                    ))}
-                  </div>
+                   <p className="text-sm text-gray-500">Opening hours not available.</p>
                 )}
               </div>
             </div>

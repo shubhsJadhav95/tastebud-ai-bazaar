@@ -88,8 +88,8 @@ const RestaurantSelect: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {restaurants.map(restaurant => (
               <Card key={restaurant.id} className="overflow-hidden flex flex-col">
-                <img 
-                  src={restaurant.image_url || '/placeholder.svg'} 
+                <img
+                  src={restaurant.coverImageUrl || restaurant.image_url || '/placeholder.svg'}
                   alt={restaurant.name}
                   className="h-40 w-full object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}

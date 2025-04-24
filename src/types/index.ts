@@ -34,11 +34,13 @@ export interface Restaurant {
   phone?: string | null;
   createdAt?: Timestamp; // Added for tracking creation time
   updatedAt?: Timestamp; // Optional or use serverTimestamp() on write
+  website?: string | null; // Add optional website field
+  opening_hours?: Record<string, string> | null; // Add optional opening hours
   // Optional fields potentially used in UI but not directly in base Firestore model
   rating?: number;
-  contactNumber: string;
-  logoUrl: string;
-  coverImageUrl: string;
+  contactNumber?: string; // Make optional for now
+  logoUrl?: string; // Make optional for now
+  coverImageUrl?: string; // Make optional for now
 }
 
 // Input type when creating a new restaurant (before ID, timestamps, lowercase are added)
